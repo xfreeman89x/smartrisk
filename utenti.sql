@@ -1,0 +1,32 @@
+-- phpMyAdmin SQL Dump
+-- version 3.5.2.2
+-- http://www.phpmyadmin.net
+--
+-- Host: 127.0.0.1
+-- Generato il: Apr 25, 2014 alle 10:48
+-- Versione del server: 5.5.27
+-- Versione PHP: 5.5.0
+
+SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
+SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8 */;
+
+--
+-- Database: `smartrisk`
+--
+
+--
+-- Dump dei dati per la tabella `utenti`
+--
+
+INSERT INTO `utenti` (`UserId`, `Username`, `Salt`, `Pwd`, `MaxPrivilege`) VALUES
+(3, 'SecAdmin', 'f65ed45349f69da4293b6a9b69a473d229be68e35d402b63fe7c442e55ec132cb7c36e2487fbc25bd21d86ecf2564891ae584857743bf250091beb9672fc43bd', '81d84423999ec1b0013f3d8cd86d208b33f8c9e750a9f679d79fe95ac6e4c9a49153fe317d19de4549165e9a8bdd4eb377a480f0315126efa2fcb38d2e2f4b75', 1);
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
