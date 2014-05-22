@@ -818,6 +818,9 @@ app.post('/conduct-assessment', function(req, res) {
 												}
 											}
 										}
+										// deleting temp file
+										fs.unlinkSync(req.session.folder + '/temp' + timeAppend + '.xml');
+										// console.log('successfully deleted' + req.session.folder + '/temp' + timeAppend + '.xml');
 										if(ipTrovato == true) {
 											hosts = hosts.substring(0, hosts.lastIndexOf(','));
 										}										
@@ -2405,6 +2408,39 @@ app.post('/conduct-assessment', function(req, res) {
 					console.log(result[0].IpAddress);
 					var ip = result[0].IpAddress;
 					connection.release();
+					var timeAppend = (new Date()).getTime();
+					var cmd = "nmap -O " + ip + " -oX " + 
+						req.session.folder + "/temp" + timeAppend + "os.xml";
+					var child = exec(cmd, function(error, stdout, stderr) {
+						var parser = new xml2js.Parser();
+						var data = fs.readFileSync(req.session.folder + '/temp' + timeAppend + 'os.xml');
+						parser.parseString(data, function(err, result) { // sync call default: online documentation
+							if(typeof result.nmaprun.host !== 'undefined') {
+							// console.log(result.nmaprun.host[0]);
+								if(typeof result.nmaprun.host[0].os[0].osmatch !== 'undefined') {
+									// console.log(result.nmaprun.host[0].os[0].osmatch[0]);
+									for(var i = 0; i < result.nmaprun.host[0].os[0].osmatch.length; i++) {
+										// console.log(result.nmaprun.host[0].os[0].osmatch[0].osclass[0].cpe[0]);
+										for(var j = 0; j < result.nmaprun.host[0].os[0].osmatch[i].osclass.length; j++) {
+											for(var k = 0; k < result.nmaprun.host[0].os[0].osmatch[i].osclass[j].cpe.length; k++) {
+												var cpe = result.nmaprun.host[0].os[0].osmatch[i].osclass[j].cpe[k];
+												// console.log(cpe);
+											}
+										}
+									}
+								}
+								else {
+									console.log('It was not possible to detect operating system');
+								}
+							}
+							else {
+								console.log('Selected host is unreachable');
+							}
+							// deleting temp file
+							fs.unlinkSync(req.session.folder + '/temp' + timeAppend + 'os.xml');
+							// console.log('successfully deleted' + req.session.folder + '/temp' + timeAppend + 'os.xml');
+						});
+					});
 				}
 			});
 		});
