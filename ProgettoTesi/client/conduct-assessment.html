@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<link href="css/style.css" rel="stylesheet">
+		<link href="css/menu-style.css" rel="stylesheet">
+		<link href="css/themes/default/style.min.css" rel="stylesheet">
+		<link href="css/ui-lightness/jquery-ui-1.10.4.custom.css" rel="stylesheet">
+		<title>Conduct Assessment</title>
+	</head>
+	<body>
+		<div id="body_wrap">
+			<div id="dialogProperties" title="Properties"></div>
+			<div id="dialogDelete" title="Delete"></div>
+			<div id="dialogSoftware" title="Choose one product"></div>
+			<div id='cssmenu'>
+				<ul>
+					<li><a href='home'><span>Home</span></a></li>
+					<li><a href='prepare-for-assessment'><span>Prepare for Assessment</span></a></li>
+					<li class='active'><a href='conduct-assessment'><span>Conduct Assessment</span></a></li>
+					<li><a href='communicate-result'><span>Communicate Result</span></a></li>
+					<li class='last'><a href='logout'><span>Logout</span></a></li>
+				</ul>
+			</div>
+			<div id="status">
+			</div>
+			<div id="wrapper">
+				<div id="send_scan">
+					<div id="tabs">
+						<ul>
+							<li id="asset" onclick="setActive(this.id)"><a class='active' href="#tabAsset">Assets</a></li>
+							<li id="threat" onclick="setActive(this.id)"><a href="#tabThreat">Threats</a></li>
+       						<li id="vulnerability" onclick="setActive(this.id)"><a href="#tabVulnerability">Vulnerabilities</a></li>
+						</ul>
+					</div>
+					<div id="container">
+						<div class="content">
+							<div id="tabAsset">
+								<div id="assetDefinition">
+									<div id="assetTypeDiv">
+										Asset Type <select id="assetType"></select>
+									</div>
+									<div id="assetRefDiv">
+									</div>
+									<div id="assetInfo">
+									</div>
+									<input id="button_add_asset" class="button orange" type="button" value="Add Asset" disabled>
+								</div>
+								<div id="assetTree">
+								</div>
+							</div>
+						</div>
+						<div class='content'>
+							<div id="tabThreat">
+								
+							</div>
+						</div>
+						<div class='content'>
+							<div id="tabVulnerability">
+								
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<script type="text/javascript" src="js/jquery-1.10.2.js"></script>
+		<script type="text/javascript" src="js/jstree.js"></script>
+		<script type="text/javascript" src="js/jquery-ui-1.10.4.custom.js"></script>
+		<script>
+			function setActive(clicked_id) {
+				parent = document.getElementById(clicked_id).parentNode;
+				sibling = parent.childNodes;
+				for(i = 1; i < sibling.length - 1; i++) {
+					sibling[i].childNodes[0].removeAttribute("class");
+					i++;
+				}
+				document.getElementById(clicked_id).childNodes[0].setAttribute("class", "active");
+			}
+			
+			function radioNetworkCheck() {
+				var flag = document.getElementById("ip_range_radio").checked;
+				if(flag == true) { // ip range checked
+					document.getElementById("cidr_row").setAttribute("hidden", "true");
+					document.getElementById("end_address_row").removeAttribute("hidden");
+					document.getElementById("start_address_row").removeAttribute("hidden");
+				}
+				else if(flag == false) { // cidr checked
+					document.getElementById("start_address_row").setAttribute("hidden", "true");
+					document.getElementById("end_address_row").setAttribute("hidden", "true");
+					document.getElementById("cidr_row").removeAttribute("hidden");
+				}
+			}
+			
+			function radioScanCheck() {
+				var flag = document.getElementById("manual_radio").checked;
+				if(flag == true) {
+					document.getElementById("hostname_row").removeAttribute("hidden");
+					document.getElementById("ip_address_row").removeAttribute("hidden");
+					document.getElementById("distinguished_name_row").removeAttribute("hidden");
+					document.getElementById("mac_address_row").removeAttribute("hidden");
+					document.getElementById("motherboard_guid_row").removeAttribute("hidden");
+					document.getElementById("destinations_manual").removeAttribute("hidden");
+					document.getElementById("auto_scan_div").setAttribute("hidden", "true");
+					document.getElementById("button_start_scan").setAttribute("style", "visibility:hidden");
+					document.getElementById("host_found_table").setAttribute("hidden", "true");
+					document.getElementById("destinations_auto").setAttribute("hidden", "true");
+				}
+				else if(flag == false) {
+					document.getElementById("hostname_row").setAttribute("hidden", "true");
+					document.getElementById("ip_address_row").setAttribute("hidden", "true");
+					document.getElementById("distinguished_name_row").setAttribute("hidden", "true");
+					document.getElementById("mac_address_row").setAttribute("hidden", "true");
+					document.getElementById("motherboard_guid_row").setAttribute("hidden", "true"); 
+					document.getElementById("destinations_auto").removeAttribute("hidden");
+					document.getElementById("button_start_scan").removeAttribute("style");
+					document.getElementById("host_found_table").removeAttribute("hidden");
+					document.getElementById("auto_scan_div").removeAttribute("hidden");
+					document.getElementById("destinations_manual").setAttribute("hidden", "true");
+				}
+			}
+			
+			function softwareCheck() {
+				var flag = document.getElementById("os_radio").checked;
+				var selectedValue = '';
+				if(flag === true) {
+					$('#destinations option:selected').each(function() {
+						selectedValue = $(this).text().toLowerCase();
+					});
+					if(selectedValue === '') {
+						document.getElementById("button_os_discovery").setAttribute("disabled", "true");
+					}
+					else {
+						document.getElementById("button_os_discovery").removeAttribute("disabled");
+					}
+				}
+				else {
+					document.getElementById("button_os_discovery").setAttribute("disabled", "true");					
+				}
+			}
+			
+			function selectCpe(obj) {
+				$("#cpe").val(obj);
+				$("#dialogSoftware").dialog("close");
+			}
+			
+			$(document).ready(function() {
+				var checkSession = function() {
+					$.post("prepare-for-assessment", {
+						request: "sessionData"
+					},
+					function(data, status) {
+						if(data.response === 'none') {
+							$("#status").html('Nessuna sessione attiva.');
+							actualAssessment = null;
+						}
+						else {
+							$("#status").html('Current assessment: ' + data.response + ' (<a href="#" id="detachAssessment">Disconnetti</a>)');
+							actualAssessment = data.response;
+						}
+					});
+				}
+				
+				var assetTypeList = function() {
+					$.post("conduct-assessment", {
+						request: "asset"
+					},
+					function(data, status) {
+						if(data.result != 'errorSession') {
+							var values = '<option></option>';
+							for(var i = 0; i < data.values.length; i++) {
+								values += '<option>' + data.values[i] + '</option>';
+							}
+							$("#assetType").html(values);
+						}
+					});
+				}
+				
+				var drawAssetTree = function() {
+					$('#assetTree').jstree({
+						"core" : {
+							"theme" : {
+						    	"variant" : "large"
+							},
+							"check_callback" : "true",
+						},
+						"checkbox" : {
+							"keep_selected_style" : false
+						},
+						"types" : {
+							"organization" : {
+								"icon" : "img/treeicon/organization.png"
+							},
+							"person" : {
+								"icon" : "img/treeicon/person.png"
+							},
+							"network" : {
+								"icon" : "img/treeicon/network.png"
+							},
+							"system" : {
+								"icon" : "img/treeicon/system.png"
+							},
+							"computing-device" : {
+								"icon" : "img/treeicon/computing.png"
+							}
+						},
+						"plugins" : [ "types", "contextmenu" ],
+						"contextmenu" : {
+							"items" : function($node) {
+								return {
+									"Delete" : {
+					                    "label" : "Delete",
+					                    "action" : function (obj) {
+					                    	$("#dialogDelete").empty();
+					                    	var node = $.jstree.reference("#assetTree").get_node(obj.reference);
+				                        	$("#dialogDelete").append("Cancellare l'asset di tipo " + node.type + " chiamato " + node.text + "?");
+					                        $("#dialogDelete").dialog({
+					                        	modal: true,
+					                        	resizable: false,
+					                        	buttons: {
+					                        		Yes: function() {
+					                        			// collecting to server list of nodes to delete (from leaf nodes to root nodes)
+					                        			var list = $.jstree.reference("#assetTree").get_json(node.text, {'flat':true});
+								                    	n = list.length;
+								                    	var jsonArray = '{"values":[';
+								                    	for(var i = 0; i < parseInt(n); i++) {
+								                    		var k = parseInt(n) - parseInt(i) - 1;
+								                    		jsonArray += '{"name": "' + list[k].text + '", "type": "' + list[k].type + '"},'
+								                    	}
+								                    	if(jsonArray.lastIndexOf(',') !== -1) {
+															jsonArray = jsonArray.substring(0, jsonArray.lastIndexOf(','));
+														}
+								                    	jsonArray += ']}';
+					                        			// sending via ajax request array with nodes to delete
+					                        			$.post("conduct-assessment", {
+					                						request: 'deleteAsset',
+					                						arg: jsonArray
+					                					},
+					                					function(data, status) {
+					                						if(data.result === 'ok') {
+					                							$('#assetTree').empty().jstree('destroy');
+																drawAssetTree();
+					                						}
+					                						else if(data.result === 'errorRequest') {
+					                							
+					                						}
+					                					});
+					                        			$(this).dialog("close");
+					                        		},
+					                        		No: function() {
+					                        			// nothing to do
+					                        			$(this).dialog("close");
+					                        		}
+					                        	}
+					                        });
+					                    }
+					                },
+					                "Properties" : {
+					                	"label" : "Properties",
+					                	"action" : function (obj) {
+					                		$("#dialogProperties").empty();
+					                    	var node = $.jstree.reference("#assetTree").get_node(obj.reference);
+					                    	$.post("conduct-assessment", {
+		                						request: 'propertyAsset',
+		                						arg1: node.text,
+		                						arg2: node.type
+		                					},
+		                					function(data, status) {
+		                						if(data.result === 'errorRequest') {
+		                							
+		                						}
+		                						for(var i = 0; i < data.result.length; i++) {
+		                							var value = data.result[i].value;
+		                							if(value === 'null') {
+		                								value = '---'
+		                							}
+		                							$("#dialogProperties").append(data.result[i].field + ": " + value + "<br>");
+		                						}
+		                					});
+				        					$("#dialogProperties").dialog({
+				        						modal: true,
+				        						resizable: false,
+				        						buttons: {
+				        							Ok: function() {
+				        								$(this).dialog("close");
+				        							}
+				        						}
+				        					});
+					                	}
+					                }
+								};
+							} 
+						}
+					});
+					$.post("conduct-assessment", {
+						request: "assetTree"
+					},
+					function(data, status) {	
+						var treeValues = data.values;
+						for(var i = 0; i < treeValues.length; i++) {
+							var name = treeValues[i].name;
+							var parent = treeValues[i].parent;
+							var type = treeValues[i].type;
+							var node = { "id" : name, "text" : name };
+							var id = $.jstree.reference("#assetTree").create_node(parent, node, 'last');
+							$.jstree.reference("#assetTree").set_type(id, type);
+						}
+						$.jstree.reference("#assetTree").open_all();
+					});
+				}
+				
+				checkSession();
+				assetTypeList();
+				drawAssetTree();
+				window.location.href = "#tabAsset";
+				
+				$("#status").on('click', '#detachAssessment', function(event) {
+					$.post("conduct-assessment", {
+						request: 'detach'
+					},
+					function(data, status) {
+						checkSession();
+						window.location.href = "prepare-for-assessment";
+					});
+				});
+				
+				$("#asset").click(function() {
+					var flag = document.getElementById("button_add_asset").hasAttribute("disabled");
+					if(flag == false) {
+						document.getElementById("button_add_asset").setAttribute("disabled", "true");
+					}
+					assetTypeList();
+				});
+				
+				$("#assetType").change(function() {
+					var option = '';
+					$('#assetType option:selected').each(function() {
+						option = $(this).text().toLowerCase();
+					});
+					$("#assetInfo").empty();
+					$("#relationTypeDiv").empty();
+					if(option != '') {
+						$.post("conduct-assessment", {
+							request: "assetType",
+							arg: option
+						},
+						function(data, status) {
+							if(data.result == 'enable') {
+								var flag = document.getElementById("button_add_asset").hasAttribute("disabled");
+								if(flag == true) {
+									document.getElementById("button_add_asset").removeAttribute("disabled");
+								}
+								var info = '<table id="info">';
+								switch(option) {
+									case "software":
+										info += "<tr><td>os <input id='os_radio' type='radio' name='discovery' value='os' checked onclick='softwareCheck()'></td>" +
+											"<td colspan='2'>application <input id='application_radio' type='radio' name='discovery' value='application' onclick='softwareCheck()'></td></tr>"; 
+										for(var i = 0; i < data.values.length; i++) {
+											if(data.values[i] === 'cpe') {
+												info += "<tr id='" + data.values[i] + "_row'><td>" + data.values[i] + "</td><td><input id='" + data.values[i] + "' type='text'></td>";
+												info += "<td><img id='button_discovery' type='button' src='img/search.png'></td></tr>";
+											}
+											else {
+												info += "<tr id='" + data.values[i] + "_row'><td>" + data.values[i] + "</td><td colspan='2'><input id='" + data.values[i] + "' type='text' size='50'></td></tr>";
+											}
+										}
+										// relations
+										info += "<tr><td>" + data.relation + "</td><td colspan='2'><select id='destinations' onchange='softwareCheck()'><option></option>";
+										for(var j = 0; j < data[data.relation].length; j++) {
+											info += "<option>" + data[data.relation][j] + "</option>";
+										}
+										info += "</select></td></tr>";
+										info += '<tr><td colspan="3"><input id="button_os_discovery" class="button orange" type="button" value="OS discovery"></td></tr>';
+										info += '</table>';
+										$("#assetInfo").html(info);
+										softwareCheck();
+										break;
+									case "network":
+										info += "<tr><td>ip range <input id='ip_range_radio' type='radio' name='ip' value='range' checked onclick='radioNetworkCheck()'></td>" +
+											"<td>cidr <input id='cidr_radio' type='radio' name='ip' value='cidr' onclick='radioNetworkCheck()'></td></tr>"; 
+										for(var i = 0; i < data.values.length; i++) {
+											info += "<tr id='" + data.values[i] + "_row'><td>" + data.values[i] + "</td><td><input id='" + data.values[i] + "' type='text'></td></tr>";
+										}
+										// relations
+										info += "<tr><td>" + data.relation + "</td><td><select id='destinations'><option></option>";
+										for(var j = 0; j < data[data.relation].length; j++) {
+											info += "<option>" + data[data.relation][j] + "</option>";
+										}
+										info += "</select></td></tr>";
+										info += '</table>';
+										$("#assetInfo").html(info);
+										radioNetworkCheck();
+										break;
+									case "person":
+									case "organization":
+									case "system":
+									case "circuit":
+										for(var i = 0; i < data.values.length; i++) {
+											info += "<tr><td>" + data.values[i] + "</td><td><input id='" + data.values[i] + "' type='text'></td></tr>";
+										}
+										// relations
+										if(data.relation != '') {
+											info += "<tr><td>" + data.relation + "</td><td><select id='destinations'><option></option>";
+											for(var j = 0; j < data[data.relation].length; j++) {
+												info += "<option>" + data[data.relation][j] + "</option>";
+											}
+											info += "</select></td></tr>";
+										}
+										info += '</table>';
+										$("#assetInfo").html(info);
+										break;
+									case "computing device":
+										// manual
+										info += "<tr><table id='radio_table'><tr><td>manual mode <input id='manual_radio' type='radio' name='scan' value='manual' checked onclick='radioScanCheck()'></td>" + 
+											"<td>auto mode <input id='auto_radio' type='radio' name='scan' value='auto' onclick='radioScanCheck()'></td></tr></table></tr>";
+										info += "<tr><table id='manual_value'>";
+										for(var i = 0; i < data.values.length; i++) {
+											info += "<tr id='" + data.values[i] + "_row'><td>" + data.values[i] + "</td><td><input id='" + data.values[i] + "' type='text'></td></tr>";
+										}
+										if(data.relation != '') {
+											info += "<tr id='destinations_manual'><td>" + data.relation + "</td><td><select id='destinations'><option></option>";
+											for(var j = 0; j < data[data.relation].length; j++) {
+												info += "<option>" + data[data.relation][j] + "</option>";
+											}
+											info += "</select></td></tr>";
+										}
+										info += "</table>";
+										// auto
+										info += "<div id='notification_assessment'></div>";
+										info += "<table id='host_found_table'></table>";
+										info += '<div id="auto_scan_div">' + data.relation + "&nbsp" +
+											'<select id="destinations_auto"><option></option>';
+										for(var j = 0; j < data[data.relation].length; j++) {
+											info += "<option>" + data[data.relation][j] + "</option>";
+										}
+										info += "</select>";
+										info += "</div>"
+										info += '<input id="button_start_scan" class="button orange" type="button" value="Start Scan">';
+										info += '</table>';
+										$("#assetInfo").html(info);
+										radioScanCheck();
+										break;
+									default:
+										info += "<tr><td>Error: invalid posted data<td><tr>";
+										$("#assetInfo").html(info);
+								}
+							}
+							else if(data.result == 'disable') {
+								var flag = document.getElementById("button_add_asset").hasAttribute("enabled");
+								if(flag == true) {
+									document.getElementById("button_add_asset").removeAttribute("enabled");
+									document.getElementById("button_add_asset").setAttribute("disabled", "true");
+								}
+								else {
+									document.getElementById("button_add_asset").setAttribute("disabled", "true");
+								}
+							}
+						});
+					}
+					else {
+						var flag = document.getElementById("button_add_asset").hasAttribute("enabled"); 
+						if(flag = true) {
+							document.getElementById("button_add_asset").removeAttribute("enabled");
+							document.getElementById("button_add_asset").setAttribute("disabled", "true");
+						}
+					}
+				});
+				
+				$("#assetDefinition").on('click', '#button_discovery', function(event) {
+					var osFlag = document.getElementById("os_radio").checked;
+					var cpe = document.getElementById("cpe").value;
+					var type;
+					if(osFlag == true) {
+						type = 'os';
+					}
+					else {
+						type = 'sw';
+					}
+					var nRow = 20;
+					$.post("conduct-assessment", {
+						request: 'softwareDictionary',
+						arg1: type,
+						arg2: nRow,
+						arg3: 0,
+						arg4: cpe
+					},
+					function(data, status) {
+						$("#dialogSoftware").empty();
+						var str = '<table id="softwareTable">';
+						for(var i = 0; i < data.values.length; i++) {
+							str += "<tr><td><button id='" + data.values[i].cpe_value + "' class='cpeElement' onclick='selectCpe(this.id)'>" + data.values[i].cpe_value + 
+								"</button></td><td>" + data.values[i].description + "</td></tr>";
+						}
+						str += '</table>';
+						$("#dialogSoftware").append(str);
+                        $("#dialogSoftware").dialog({
+                        	modal: true,
+                        	width: '800',
+                        	resizable: false
+                        });
+					});
+				});
+				
+				$("#assetDefinition").on('click', '#button_os_discovery', function(event) {
+					var device = '';
+					$('#destinations option:selected').each(function() {
+						device = $(this).text().toLowerCase();
+					});
+					if(device !== '') {
+						$.post("conduct-assessment", {
+							request: 'osDiscovery',
+							arg: device
+						},
+						function(data, status) {
+							
+						});
+					}
+					else {
+						alert('Select a relation, please!');
+					}
+				});
+				
+				$("#assetDefinition").on('click', '#button_start_scan', function(event) {
+					var i = 0;
+					var timer = setInterval(function() {
+						if(i%3 == 0) {
+							$("#notification_assessment").empty();
+							$("#notification_assessment").html("Attendere prego.&nbsp&nbsp");
+						}
+						else if(i%3 == 1) {
+							$("#notification_assessment").empty();
+							$("#notification_assessment").html("Attendere prego..&nbsp");
+						}
+						else if(i%3 == 2) {
+							$("#notification_assessment").empty();
+							$("#notification_assessment").html("Attendere prego...");
+						}
+						i++;
+					}, 1000);
+					var option = '';
+					$('#destinations_auto option:selected').each(function() {
+						option = $(this).text().toLowerCase();
+					});
+					$.post("conduct-assessment", {
+						request: 'scan',
+						arg: option
+					},
+					function(data, status) {
+						if(data.result != null) {
+							if(data.result === 'invalidSubnet') {
+								clearInterval(timer);
+								$("#notification_assessment").empty();
+								alert('Subnet deve essere un valore compreso tra 16 e 30');
+							}
+							else if(data.result === 'invalidIpAddress') {
+								clearInterval(timer);
+								$("#notification_assessment").empty();
+								alert('Indirizzo IP inserito non valido');
+							}
+							else if(data.result === 'errorSession') {
+								clearInterval(timer);
+								$("#notification_assessment").html("Caricare un assessment prima di una scansione.");
+								setTimeout(function() {
+									$("#notification_assessment").empty();
+								}, 3000);
+							}
+						}
+						else if(data.hosts != null) {
+							var rows = "";
+							// non inserire righe che sono gia' presenti nelle tabelle
+							var table1 = document.getElementById('host_found_table');
+							for(var iHost = 0; iHost < data.hosts.length; iHost++) {
+								var trovato = false;
+								// search in first table
+								for(var iRow = 0; iRow < table1.rows.length; iRow++) {
+									if(table1.rows[iRow].cells[0].innerHTML == data.hosts[iHost].addr_ipv4)
+									trovato = true;
+								}
+								if(trovato == false) {
+									rows += "<tr><td>" + data.hosts[iHost].addr_ipv4 + "</td>";
+									rows += "<td><input type='text' value='' maxlength='128' style='width: 70px'></td>";
+									rows += "<td><input type='checkbox'></td></tr>";
+								}
+							}
+							$("#host_found_table").append(rows);
+							clearInterval(timer);
+							$("#notification_assessment").empty();
+						} 
+					});
+				});
+				
+				$("#button_add_asset").click(function() {
+					var option = '';
+					$('#assetType option:selected').each(function() {
+						option = $(this).text().toLowerCase();
+					});
+					if(option != '') {
+						switch(option) {
+							case "organization":
+							case "person":
+							case "system":
+							case "circuit":
+								var parameters = '{';
+								var tableInfo = document.getElementById("info");
+								for(var i = 0; i < tableInfo.rows.length; i++) {
+									var cell = tableInfo.rows[i].cells[1];
+									var input = cell.firstChild;
+									parameters += '"' + input.id + '":"' + input.value + '",'
+								}
+								parameters = parameters.substring(0, parameters.lastIndexOf(','));
+								parameters += '}';
+								var jsonParameters = eval("(" + parameters + ")");
+								
+								$.post("conduct-assessment", {
+									request: 'addAsset',
+									arg1: option,
+									arg2: jsonParameters
+								},
+								function(data, status) {
+									if(data.result == 'ok') {
+										$('#assetTree').empty().jstree('destroy');
+										drawAssetTree();
+										document.getElementById("assetType").selectedIndex = 0;
+										var flag = document.getElementById("button_add_asset").hasAttribute("enabled");
+										if(flag == true) {
+											document.getElementById("button_add_asset").removeAttribute("enabled");
+											document.getElementById("button_add_asset").setAttribute("disabled", "true");
+										}
+										else {
+											document.getElementById("button_add_asset").setAttribute("disabled", "true");
+										}
+										$("#info").empty();
+									}
+								});
+								break;
+							case "network":
+								var parameters = '{';
+								var tableInfo = document.getElementById("info");
+								for(var i = 1; i < tableInfo.rows.length; i++) { // index starts at 1 because of radio button
+									if(!tableInfo.rows[i].hasAttribute("hidden")) {
+										var cell = tableInfo.rows[i].cells[1];
+										var input = cell.firstChild;
+										parameters += '"' + input.id + '":"' + input.value + '",'
+									}
+								}
+								parameters = parameters.substring(0, parameters.lastIndexOf(','));
+								parameters += '}';
+								var jsonParameters = eval("(" + parameters + ")");
+								
+								$.post("conduct-assessment", {
+									request: 'addAsset',
+									arg1: option,
+									arg2: jsonParameters
+								},
+								function(data, status) {
+									if(data.result == 'ok') {
+										document.getElementById("assetType").selectedIndex = 0;
+										var flag = document.getElementById("button_add_asset").hasAttribute("enabled");
+										if(flag == true) {
+											document.getElementById("button_add_asset").removeAttribute("enabled");
+											document.getElementById("button_add_asset").setAttribute("disabled", "true");
+										}
+										else {
+											document.getElementById("button_add_asset").setAttribute("disabled", "true");
+										}
+										$("#info").empty();
+									}
+								});
+								break;
+							case "computing device":
+								var destination;
+								var flag = document.getElementById("manual_radio").checked;
+								if(flag == true) { // manual
+									var parameters = '{';
+									var tableInfo = document.getElementById("manual_value");
+									for(var i = 0; i < tableInfo.rows.length; i++) {
+										if(!tableInfo.rows[i].hasAttribute("hidden")) {
+											var cell = tableInfo.rows[i].cells[1];
+											var input = cell.firstChild;
+											if(input.id == 'destinations') {
+												destination = input.value;
+											}
+											else {
+												parameters += '"' + input.id + '":"' + input.value + '",';
+											}
+										}
+									}
+									parameters = parameters.substring(0, parameters.lastIndexOf(','));
+									parameters += '}';
+									var jsonParameters = eval("(" + parameters + ")");
+								}
+								else { // auto
+									destination = document.getElementById('destinations_auto').value;
+									var table = document.getElementById('host_found_table');
+									var ipTrovato = false;
+									var parameters = '{"hosts":[';
+									for(var iRow = 0; iRow < table.rows.length; iRow++) {
+										var checkbox = table.rows[iRow].cells[2].childNodes[0];
+										if(checkbox.checked == true) {
+											var ip = table.rows[iRow].cells[0].innerHTML;
+											var nome = table.rows[iRow].cells[1].children[0].value;
+											nome = nome.trim();
+											parameters += '{"addr_ipv4":"' + ip + '", "name":"' + nome + '"},';
+											ipTrovato = true;
+										} 
+									}
+									if(ipTrovato == true) {
+										parameters = parameters.substring(0, parameters.lastIndexOf(','));
+									}
+									parameters += ']}';
+									var jsonParameters = eval("(" + parameters + ")");
+								}
+								$.post("conduct-assessment", {
+									request: 'addAsset',
+									arg1: option,
+									arg2: jsonParameters,
+									arg3: destination,
+									manual: flag
+								},
+								function(data, status) {
+									if(data.result == 'ok') {
+										document.getElementById("assetType").selectedIndex = 0;
+										var flag = document.getElementById("button_add_asset").hasAttribute("enabled");
+										if(flag == true) {
+											document.getElementById("button_add_asset").removeAttribute("enabled");
+											document.getElementById("button_add_asset").setAttribute("disabled", "true");
+										}
+										else {
+											document.getElementById("button_add_asset").setAttribute("disabled", "true");
+										}
+										$("#info").empty();
+									}
+								});
+								break;
+							default:
+						}
+					}
+				});
+			});
+		</script>
+	</body>
+</html>

@@ -1,0 +1,338 @@
+@charset "utf-8";
+
+html
+{
+	height: 100%;
+	width: 100%;
+}
+
+body 
+{
+	min-height: 100%;
+	padding: 0px;
+	margin: 0px;
+	background-color: #FFFFFF;
+	background-image: url("../img/low_contrast_linen.png");
+	background-repeat: repeat;
+	color: #333333;
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 14px;
+	line-height: 140%;
+}
+
+#body_wrap
+{
+	min-height: 100%;
+	height: 100%;
+	margin: auto;
+}
+
+#wrapper
+{
+	text-align: left;
+	width: 100%;
+}
+
+#login_box 
+{
+	padding: 30px;
+	-webkit-box-shadow: 0px 0px 15px #000, inset rgba(255, 255, 255, 0.10) 0 1px 0, inset rgba(0, 0, 0, 0.25) 0 -1px 0;
+	-moz-box-shadow: 0px 0px 15px #000, inset rgba(255, 255, 255, 0.10) 0 1px 0, inset rgba(0, 0, 0, 0.25) 0 -1px 0;
+	box-shadow: 0px 0px 15px #000, inset rgba(255, 255, 255, 0.10) 0 1px 0, inset rgba(0, 0, 0, 0.25) 0 -1px 0;
+	background-color: #2A2A2A;
+	background-color:rgba(0,0,0,0.5);
+	-webkit-border-radius: 7px;
+	-moz-border-radius: 7px;
+	border-radius: 7px;
+	color:#999999;
+	letter-spacing:0px;
+	line-height:120%;
+	font-family:Verdana, Arial, Helvetica, sans-serif;
+	font-size:11px;
+	font-weight:bold;
+	text-shadow:0px -1px 0px #000;
+	width:270px;
+	margin: 7% auto;
+}
+
+#button_create_div, #button_scan_div
+{
+	margin: auto;
+	width:100px;
+}
+
+#wrapper input[type="text"], #wrapper input[type="email"] , #wrapper input[type="password"], #wrapper textarea
+{
+	-webkit-border-radius:5px;
+	-moz-border-radius:5px;
+	-border-radius:5px;
+	border:1px solid #555;
+	width:96%;
+	padding:4px;
+	margin-top:4px;
+	margin-bottom:15px;
+}
+
+#wrapper input[type="text"]:focus, #wrapper input[type="email"]:focus, #wrapper input[type="password"]:focus, #wrapper textarea:focus
+{
+	-webkit-box-shadow:0 0 10px #fff;
+	-moz-box-shadow:0 0 10px #fff;
+	box-shadow: 0 0 10px #fff;
+	outline: none;	
+}
+
+#send_scan input[type="text"]
+{
+	-webkit-border-radius:5px;
+	-moz-border-radius:5px;
+	-border-radius:5px;
+	border:1px solid #555;
+	width:150px;
+	padding:4px;
+	margin-top:4px;
+	margin-bottom:15px;
+}
+
+.button 
+{
+	border-radius: 0.5em;
+	box-shadow: 0 10px 5px rgba(0, 0, 0, 0.2), 0 1px 0 rgba(255, 255, 255, 0.55) inset;
+	cursor: pointer;
+	display: inline-block;
+	font: 14px/100% Arial, Helvetica, sans-serif;
+	margin-top: 10px;
+	outline: medium none;
+	padding: 0.5em 2em 0.55em;
+	text-align: center;
+	text-decoration: none;
+	text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+	width: 100%;
+}
+
+input[disabled].button, input[disabled].button:active
+{
+	background: -moz-linear-gradient(center top, #808080, #858585) repeat scroll 0 0 rgba(0, 0, 0, 0);
+	border: 1px solid #808080;
+}
+
+.button:active
+{
+	box-shadow: 0 2px 1px rgba(0, 0, 0, 0.2), 0 5px 3px rgba(255, 255, 255, 0.55) inset;
+	text-decoration:none;
+}
+
+.orange {
+	background: -moz-linear-gradient(center top, #FAA51A, #F47A20) repeat scroll 0 0 rgba(0, 0, 0, 0);
+	border: 1px solid #DA7C0C;
+	color: #FEF4E9;
+}
+
+#send_scan
+{
+	width: 900px;
+    margin: 3% auto;
+}
+
+#tabs li
+{
+	list-style: none;
+    float: left;
+    width: 150px;
+    height: 35px;
+    margin: 0 5px;
+}
+
+#tabs li a
+{
+	color: #999999;
+	background-color: #2A2A2A;
+	background-color:rgba(0,0,0,0.5);
+	-webkit-box-shadow: 0px 0px 15px #000, inset rgba(255, 255, 255, 0.10) 0 1px 0, inset rgba(0, 0, 0, 0.25) 0 -1px 0;
+	-moz-box-shadow: 0px 0px 15px #000, inset rgba(255, 255, 255, 0.10) 0 1px 0, inset rgba(0, 0, 0, 0.25) 0 -1px 0;
+	box-shadow: 0px 0px 15px #000, inset rgba(255, 255, 255, 0.10) 0 1px 0, inset rgba(0, 0, 0, 0.25) 0 -1px 0;
+	-webkit-border-top-left-radius: 7px;
+	-moz-border-top-left-radius: 7px;
+	border-top-left-radius: 7px;
+	-webkit-border-top-right-radius: 7px;
+	-moz-border-top-right-radius: 7px;
+	border-top-right-radius: 7px;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 1px 0 rgba(255, 255, 255, 0.55) inset;
+	font-weight: bold;
+    text-decoration: none;
+    width: 150px;
+    height: 35px;
+    display: block;
+    float: left;
+    line-height: 35px;
+    text-align: center;
+}
+
+#tabs li a:hover, #tabs li a.active
+{ 
+	background: -moz-linear-gradient(center top, #FAA51A, #F47A20) repeat scroll 0 0 rgba(0, 0, 0, 0);
+	color: #FEF4E9;
+}
+
+.content
+{
+    width: 900px;
+    height: 400px;
+    line-height: 22px;
+    color:#999999;
+	letter-spacing:0px;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 14px;
+	text-shadow:0px -1px 0px #000;
+}
+
+#container
+{
+	background-color: #2A2A2A;
+	background-color:rgba(0,0,0,0.5);
+	-webkit-box-shadow: 0px 0px 15px #000, inset rgba(255, 255, 255, 0.10) 0 1px 0, inset rgba(0, 0, 0, 0.25) 0 -1px 0;
+	-moz-box-shadow: 0px 0px 15px #000, inset rgba(255, 255, 255, 0.10) 0 1px 0, inset rgba(0, 0, 0, 0.25) 0 -1px 0;
+	box-shadow: 0px 0px 15px #000, inset rgba(255, 255, 255, 0.10) 0 1px 0, inset rgba(0, 0, 0, 0.25) 0 -1px 0;
+	-webkit-border-radius: 7px;
+	-moz-border-radius: 7px;
+	border-radius: 7px;
+	clear: both;
+    height: 400px; /* 350px + 25px (padding sx) + 25px (padding dx) */
+    width: 900px;
+    overflow: hidden;
+    line-height: 100%;
+    font-size: 12px;
+}
+
+#new_assessment_table
+{
+	width: 900px;
+	margin: auto;
+}
+
+.left
+{
+	text-align: right;
+}
+
+.right
+{
+	text-align: left;
+}
+
+textarea
+{
+	resize: none;
+}
+
+#welcome table, #status
+{
+	color:#999999;
+	letter-spacing:0px;
+	font-family:Verdana, Arial, Helvetica, sans-serif;
+	font-size:14px;
+	font-weight:bold;
+	margin: 2px 6px;
+}
+
+#status
+{
+	height: 20px;
+}
+
+#detachAssessment
+{
+	color: #999999;
+}
+
+#tabLoadAssessment, #tabDeleteAssessment, #tabAsset, #tabNewAssessment
+{
+	height: 400px;
+	overflow: auto;
+}
+
+#load_assessment_table, #delete_assessment_table, #new_assessment_table
+{
+	margin: auto;
+	text-align: center;
+	border-top: 15px solid rgba(255, 255, 255, 0);
+	border-bottom: 15px solid rgba(255, 255, 255, 0);
+	width: 850px;
+}
+
+#load_assessment_table tr, #delete_assessment_table tr, #new_assessment_table tr
+{
+	height: 35px;	
+}
+
+#load_assessment_table tr:nth-child(odd), #delete_assessment_table tr:nth-child(odd), 
+#conduct_assessment_table tr:nth-child(odd)
+{
+	background-color: rgba(0,0,0,0.3);
+}
+
+#load_assessment_table tr:nth-child(even), #delete_assessment_table tr:nth-child(even),
+#conduct_assessment_table tr:nth-child(even)
+{
+	background-color: rgba(25,25,25,0.0);
+}
+
+#conduct_assessment_table td, #conduct_assessment_table th
+{
+	height: 35px;
+}
+
+#notification_assessment
+{
+	height: 20px;
+	text-align: center;
+	margin-top: 5px;
+	margin-bottom: 8px;
+}
+
+#assetDefinition
+{
+	float: left;
+	width: 425px;
+	height: 380px;
+}
+
+#assetTree
+{
+	float: right;
+	width: 425px;
+	height: 380px;
+}
+
+#tabConductAssessment
+{
+	background-color: #2A2A2A;
+	background-color:rgba(0,0,0,0.5);
+	-webkit-box-shadow: 0px 0px 15px #000, inset rgba(255, 255, 255, 0.10) 0 1px 0, inset rgba(0, 0, 0, 0.25) 0 -1px 0;
+	-moz-box-shadow: 0px 0px 15px #000, inset rgba(255, 255, 255, 0.10) 0 1px 0, inset rgba(0, 0, 0, 0.25) 0 -1px 0;
+	box-shadow: 0px 0px 15px #000, inset rgba(255, 255, 255, 0.10) 0 1px 0, inset rgba(0, 0, 0, 0.25) 0 -1px 0;
+	-webkit-border-radius: 7px;
+	-moz-border-radius: 7px;
+	border-radius: 7px;
+	clear: both;
+    height: 500px; /* 350px + 25px (padding sx) + 25px (padding dx) */
+    width: 900px;
+    overflow: hidden;
+    line-height: 100%;
+    font-size: 16px;
+    margin: 25px auto;
+    color:#999999;
+	letter-spacing:0px;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 14px;
+	text-shadow:0px -1px 0px #000;
+}
+
+#conduct_assessment_table {
+	margin: auto;
+	width: 850px;
+}
+
+.imageButton:hover
+{
+	cursor: pointer;
+}

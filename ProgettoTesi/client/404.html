@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+	<head>
+        <link href="css/style.css" rel="stylesheet">
+        <title>404</title>
+	</head>
+    <body>
+        <div id="wrapper">
+            <div id="login_box">
+                <div id="logo">
+                    <img alt="SmartRisk" src="img/logo.png" width="120">
+                </div>
+                <br>
+                <div id="404">
+                    404 error: File not found. <br>
+                    The URL you requested was not found.
+                </div>
+            </div>
+            <br>
+            <br>
+            <div id="countdown"></div>
+        </div>
+        <script type="text/javascript" src="js/applyStyle.js"></script>
+        <script>
+        	var i = 0;
+       		var timer = setInterval(function() {
+       			var countdown = 5 - i;
+            	applyStyleLogin('countdown');
+       			document.getElementById('countdown').innerHTML = 
+       				'You will be redirected to login in: ' + countdown;
+       			i++;
+       			if(countdown == 0) {
+       				clearInterval(timer);
+       				window.location.replace("./");
+       			}
+       		}, 1000);
+        </script>
+    </body>
+</html>

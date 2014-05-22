@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<link href="css/style.css" rel="stylesheet">
+		<link href="css/menu-style.css" rel="stylesheet">
+		<title>Prepare for Assessment</title>
+	</head>
+	<body>
+		<div id="body_wrap">
+			<div id='cssmenu'>
+			<ul>
+				<li><a href='home'><span>Home</span></a></li>
+				<li class='active'><a href='prepare-for-assessment'><span>Prepare for Assessment</span></a></li>
+				<li><a href='conduct-assessment'><span>Conduct Assessment</span></a></li>
+				<li><a href='communicate-result'><span>Communicate Result</span></a></li>
+				<li class='last'><a href='logout'><span>Logout</span></a></li>
+			</ul>
+			</div>
+			<div id="status">
+			</div>
+			<div id="wrapper">
+				<div id="send_scan">
+					<div id="tabs">
+						<ul>
+							<li id="new" onclick="setActive(this.id)"><a class='active' href="#tabNewAssessment">New</a></li>
+       						<li id="load" onclick="setActive(this.id)"><a href="#tabLoadAssessment">Load</a></li>
+       						<li id="delete" onclick="setActive(this.id)"><a href="#tabDeleteAssessment">Delete</a></li>
+						</ul>
+					</div>
+					<div id="container">
+						<div class="content">
+							<div id="tabNewAssessment">
+								<form id="new_assessment_form">
+									<table id="new_assessment_table">
+										<tr>
+											<td class="left">Nome Valutazione*</td>
+											<td class="right"><input id="nome_text" type="text" name="nome_valutazione" value="" style="width:250px"></td>
+										</tr>
+										<tr>
+											<td class="left">Organizzazione</td> 
+											<td class="right"><input id="org_text" type="text" name="organizzazione" value="" style="width:250px"></td>
+										</tr>
+										<tr>
+											<td class="left">Responsabile Sicurezza</td> 
+											<td class="right"><input id="resp_text" type="text" name="responsabile" value="" style="width:250px"></td>
+										</tr>
+										<tr>
+											<td class="left">Descrizione</td>
+											<td class="right"><textarea id="desc_text" type="text" name="descrizione" value="" maxLength="1000" rows="4" style="width:250px"></textarea></td>
+										</tr>
+									</table>
+									<div id="button_create_div">
+										<input id="button_create" class="button orange" type="button" value="Create">
+									</div>
+								</form>
+							</div>
+						</div>
+						<div class='content'>
+							<div id="tabLoadAssessment">
+								<table id="load_assessment_table">
+								</table>
+							</div>
+						</div>
+						</table>
+						<div class='content'>
+							<div id="tabDeleteAssessment">
+								<table id="delete_assessment_table">
+								</table>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<script type="text/javascript" src="js/jquery-1.10.2.js"></script>
+		<script>			
+			function setActive(clicked_id) {
+				parent = document.getElementById(clicked_id).parentNode;
+				sibling = parent.childNodes;
+				for(i = 1; i < sibling.length - 1; i++) {
+					sibling[i].childNodes[0].removeAttribute("class");
+					i++;
+				}
+				document.getElementById(clicked_id).childNodes[0].setAttribute("class", "active");
+			}
+			
+			function checkSubmit() {
+				if(document.getElementById('subnet_flag').checked == true) {
+					document.getElementById('subnet_text').removeAttribute("disabled");
+				}
+				else if(document.getElementById('subnet_flag').checked == false) {
+					document.getElementById('subnet_text').value = '';
+					document.getElementById('subnet_text').setAttribute("disabled", "true");
+				}
+			}
+			
+			$(document).ready(function() {
+				var checkSession = function() {
+					$.post("prepare-for-assessment", {
+						request: "sessionData"
+					},
+					function(data, status) {
+						if(data.response === 'none') {
+							$("#status").html('Nessuna sessione attiva.');
+							actualAssessment = null;
+						}
+						else {
+							$("#status").html('Current assessment: ' + data.response + ' (<a href="#" id="detachAssessment">Disconnetti</a>)');
+							actualAssessment = data.response;
+						}
+					});
+				}
+				
+				checkSession();
+				window.location.href = "#tabNewAssessment";
+				
+				$("#status").on('click', '#detachAssessment', function(event) {
+					$.post("prepare-for-assessment", {
+						request: 'detach'
+					},
+					function(data, status) {
+						checkSession();
+						window.location.href = "prepare-for-assessment";
+					});
+				});
+				
+				$("#button_create").click(function() {
+					$.post("prepare-for-assessment", {
+						request: "new",
+						nome: $("#nome_text").val(),
+						organizzazione: $("#org_text").val(),
+						responsabile: $("#resp_text").val(),
+						descrizione: $("#desc_text").val()
+				    },
+				    function(data, status) {
+				    	if(data === 'AlreadyExist') {
+					    	alert('Un assessment con lo stesso nome è già esistente.');
+				    	}
+				    	else if(data === 'AnotherAssessmentIsRunning') {
+				    		alert('Prima di creare un nuovo assessment disconnettersi da quello in uso.');
+				    	}
+				    	else if(data === 'newAssessmentOk') {
+				    		checkSession();
+				    		$("#nome_text").val('');
+				    		$("#org_text").val('');
+				    		$("#resp_text").val('');
+				    		$("#desc_text").val('');
+				    	}
+				    });
+				});
+				
+				$("#button_scan").click(function() {
+					var ip = $("#ip_text").val();
+					var subnetFlag = $("#subnet_flag").is(":checked");
+					var subnetText = $("#subnet_text").val();
+		       		var i = 0;
+					var timer = setInterval(function() {
+		       			if(i%3 == 0) {
+		       				$("#notification_assessment").empty();
+		       				$("#notification_assessment").html("Attendere prego.&nbsp&nbsp");
+		       			}
+		       			else if(i%3 == 1) {
+		       				$("#notification_assessment").empty();
+		       				$("#notification_assessment").html("Attendere prego..&nbsp");
+		       			}
+		       			else if(i%3 == 2) {
+		       				$("#notification_assessment").empty();
+		       				$("#notification_assessment").html("Attendere prego...");
+		       			}
+		       			i++;	
+		       		}, 1000);
+					$.post("prepare-for-assessment", {
+						request: "scan-commit",
+						arg1: ip,
+						arg2: subnetFlag,
+						arg3: subnetText
+					},
+					function(data, status) {
+						if(data.result != null) {
+							if(data.result === 'invalidSubnet') {
+								clearInterval(timer);
+								alert('Subnet deve essere un valore compreso tra 16 e 30');
+							}
+							else if(data.result === 'invalidIpAddress') {
+								clearInterval(timer);
+								alert('Indirizzo IP inserito non valido');
+							}
+							else if(data.result === 'errorSession') {
+								clearInterval(timer);
+								$("#notification_assessment").html("Caricare un assessment prima di una scansione.");
+								setTimeout(function() {
+									$("#notification_assessment").empty();
+								}, 3000);
+							}
+						}
+						else if(data.hosts != null) {
+							var rows = "";
+							// non inserire righe che sono gia' presenti nelle tabelle
+							var table1 = document.getElementById('host_found_table');
+							var table2 = document.getElementById('host_choosen_table');
+							for(var iHost = 0; iHost < data.hosts.length; iHost++) {
+								var trovato1 = false;
+								// search in first table
+								for(var iRow = 1; iRow < table1.rows.length; iRow++) {
+									if(table1.rows[iRow].cells[0].innerHTML == data.hosts[iHost].addr_ipv4)
+										trovato1 = true;
+								}
+								var trovato2 = false;
+								// search in second table
+								for(var iRow = 1; iRow < table2.rows.length; iRow++) {
+									if(table2.rows[iRow].cells[0].innerHTML == data.hosts[iHost].addr_ipv4)
+										trovato2 = true;
+								}
+								if(trovato1 == false && trovato2 == false) {
+									rows += "<tr><td>" + data.hosts[iHost].addr_ipv4 + "</td>";
+									rows += "<td>" + data.hosts[iHost].satellite + "</td>";
+									rows += "<td><input type='text' value='' maxlength='128' style='width: 70px'></td>";
+									rows += "<td><input type='checkbox'></td></tr>";
+								}
+							}
+							$("#host_found_table").append(rows);
+							clearInterval(timer);
+							$("#notification_assessment").empty();
+						}
+					});
+				});
+				
+				$("#addHost").click(function() {
+					var table = document.getElementById('host_found_table');
+					for(var iRow = 1; iRow < table.rows.length; iRow++) {
+						var checkbox = table.rows[iRow].cells[3].childNodes[0];
+						if(checkbox.checked == true) {
+							var ip = table.rows[iRow].cells[0].innerHTML;
+							var satellite = table.rows[iRow].cells[1].innerHTML;
+							var nome = table.rows[iRow].cells[2].children[0].value;
+							nome = nome.trim();
+							if(nome == '') {
+								nome = '-';
+							}
+							var row = "<tr><td>" + ip + "</td><td>" + satellite + 
+								"</td><td>" + nome + "</td><td><input type='checkbox'></td></tr>";
+							var deleteNode = table.rows[iRow];
+							deleteNode.parentNode.removeChild(deleteNode);
+							iRow--; // se il vettore scala di uno non salto il nodo successivo dopo l'eliminazione
+							$("#host_choosen_table").append(row);
+						}
+					}
+				});
+				
+				$("#removeHost").click(function() {
+					var table = document.getElementById('host_choosen_table');
+					for(var iRow = 1; iRow < table.rows.length; iRow++) {
+						var checkbox = table.rows[iRow].cells[3].childNodes[0];
+						if(checkbox.checked == true) {
+							var ip = table.rows[iRow].cells[0].innerHTML;
+							var satellite = table.rows[iRow].cells[1].innerHTML;
+							var nome = table.rows[iRow].cells[2].innerHTML;
+							if(nome == '-') {
+								nome = '';
+							}
+							var row = "<tr><td>" + ip + "</td><td>" + satellite + "</td><td>" + 
+								"<input type='text' value='" + nome + "' maxlength='128' style='width: 70px'>" + 
+								"</td><td><input type='checkbox'></td></tr>";
+							var deleteNode = table.rows[iRow];
+							deleteNode.parentNode.removeChild(deleteNode);
+							iRow--; // se il vettore scala di uno non salto il nodo successivo dopo l'eliminazione
+							$("#host_found_table").append(row);
+						}
+					}
+				});
+				
+				$("#saveHost").click(function() {
+					var table = document.getElementById('host_choosen_table');
+					var ipTrovato = false;
+					var hosts = '{"hosts":[';
+					for(var iRow = 1; iRow < table.rows.length; iRow++) {
+						hosts += '{"addr_ipv4":"' + table.rows[iRow].cells[0].innerHTML + '", "satellite":"' + 
+							table.rows[iRow].cells[1].innerHTML + '", "nome":"' + table.rows[iRow].cells[2].innerHTML +'"},';
+						ipTrovato = true;
+					}
+					if(ipTrovato == true) {
+						hosts = hosts.substring(0, hosts.lastIndexOf(','));
+					}
+					hosts += ']}';
+					var jsonHosts = eval("(" + hosts + ")");
+					$.post("prepare-for-assessment", {
+						request: "save",
+						msg: jsonHosts
+					},
+					function(data, status) {
+						if(data.result === 'ok') {
+							$("#notification_assessment").html("Gli host sono stati salvati correttamente!");
+							setTimeout(function() {
+								$("#notification_assessment").empty();
+							}, 3000);
+						}
+						else if(data.result === 'errorSession') {
+							$("#notification_assessment").html("Caricare un assessment prima di una scansione.");
+							setTimeout(function() {
+								$("#notification_assessment").empty();
+							}, 3000);
+						}
+					});
+				});
+				
+				$("#load").click(function() {
+					$.post("prepare-for-assessment", {
+						request: "load"	
+					},
+					function(data, status) {
+						if(data.response === 'none') {
+							$("#load_assessment_table")
+								.html('<tr><td>No assessments are present in the database</td></tr>');
+						}
+						else {
+							var rows = "<tr><th>Assessment</th><th>Organization</th><th>Security Manager</th><th>Description</th><th>Load</th></tr>";
+							for(i = 0; i < data.response.length; i++) {
+								rows += "<tr><td id='nome_load_"+i+"' width='150'>"+data.response[i].Nome+"</td>";
+								if(data.response[i].Organizzazione == null)
+									rows += "<td width='150'>-</td>";
+								else
+									rows += "<td width='150'>"+data.response[i].Organizzazione+"</td>";
+								if(data.response[i].RespSicurezza == null)
+									rows += "<td width='200'>-</td>";
+								else
+									rows += "<td width='200'>"+data.response[i].RespSicurezza+"</td>";
+								if(data.response[i].Descrizione == null)
+									rows += "<td width='150'>-</td>";
+								else
+									rows += "<td width='250'>"+data.response[i].Descrizione+"</td>";
+								rows += "<td><img id='buttonLoad_"+i+"' class='buttonLoad imageButton' src='img/Load20x20.png'></td></tr>";
+							}
+							$("#load_assessment_table").html(rows);
+						}
+					});
+				});
+				
+				$("#delete").click(function() {
+					$.post("prepare-for-assessment", {
+						request: "delete"
+					},
+					function(data, status) {
+						if(data.response === 'none') {
+							$("#delete_assessment_table")
+								.html('<tr><td>No assessments are present in the database</td></tr>');
+						}
+						else {
+							var rows = "<tr><th>Assessment</th><th>Organization</th><th>Security Manager</th><th>Description</th><th>Load</th></tr>";
+							for(i = 0; i < data.response.length; i++) {
+								rows += "<tr><td id='nome_delete_"+i+"' width='150'>"+data.response[i].Nome+"</td>";
+								if(data.response[i].Organizzazione == null)
+									rows += "<td width='150'>-</td>";
+								else
+									rows += "<td width='150'>"+data.response[i].Organizzazione+"</td>";
+								if(data.response[i].RespSicurezza == null)
+									rows += "<td width='200'>-</td>";
+								else
+									rows += "<td width='200'>"+data.response[i].RespSicurezza+"</td>";
+								if(data.response[i].Descrizione == null)
+									rows += "<td width='150'>-</td>";
+								else
+									rows += "<td width='250'>"+data.response[i].Descrizione+"</td>";
+								rows += "<td><img id='buttonDelete_"+i+"' class='buttonDelete imageButton' src='img/Cancel20x20.png'></td></tr>";
+							}
+							$("#delete_assessment_table").html(rows);
+						}
+					});
+				});
+				
+				$("#load_assessment_table").on('click', '.buttonLoad', function(event) {
+					var clicked_id = event.target.id;
+					var index = clicked_id.lastIndexOf('_');
+					var num = clicked_id.substring(index);
+					var nome = "nome_load" + num;
+					var assessmentToLoad = document.getElementById(nome).innerHTML;
+					$.post("prepare-for-assessment", {
+						request: "commit-load",
+						arg: assessmentToLoad
+					},
+					function(data, status) {
+						if(data.response === 'assessmentLoaded') {
+							checkSession();
+						}
+						else if(data.response === 'AnotherAssessmentIsRunning') {
+							alert('Prima di caricare un nuovo assessment disconnettersi da quello in uso.');
+						}
+						else if(data.response === 'genericError') {
+							alert('Sorry! Some error occurred.');
+						}
+					});
+				});
+				
+				$("#delete_assessment_table").on('click', '.buttonDelete', function(event) {
+					var clicked_id = event.target.id;
+					var index = clicked_id.lastIndexOf('_');
+					var num = clicked_id.substring(index);
+					var nome = "nome_delete" + num;
+					var assessmentToDelete = document.getElementById(nome).innerHTML;
+					$.post("prepare-for-assessment", {
+						request: "commit-delete",
+						arg: assessmentToDelete
+					},
+					function(data, status) {
+						if(data.response === 'assessmentDeleted') {
+							var rIndex = document.getElementById(nome).parentNode.rowIndex;
+							document.getElementById('delete_assessment_table').deleteRow(rIndex);
+						}
+						else if(data.response === 'AnotherAssessmentIsRunning') {
+							alert("L'assessment che si vuole cancellare e' in uso.\nDisconnettersi prima di effettuare questa operazione.");
+						}
+						else if(data.response === 'genericError') {
+							alert('Sorry! Some error occurred.');
+						}
+					});
+				});
+			});
+			
+		</script>
+	</body>
+</html>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<link href="css/style.css" rel="stylesheet">
+		<link href="css/menu-style.css" rel="stylesheet">
+		<script type="text/javascript" src="js/jquery-1.10.2.js"></script>
+	</head>
+	<body>
+		<div id='cssmenu'>
+			<ul>
+				<li class='active'><a href='home'><span>Home</span></a></li>
+				<li><a href='prepare-for-assessment'><span>Prepare for Assessment</span></a></li>
+				<li><a href='conduct-assessment'><span>Conduct Assessment</span></a></li>
+				<li><a href='communicate-result'><span>Communicate Result</span></a></li>
+				<li class='last'><a href='logout'><span>Logout</span></a></li>
+			</ul>
+		</div>
+		<div id="welcome">
+			<table>
+				<tr>
+					<td>Welcome,</td><td id="username"></td>
+				</tr>
+			</table> 
+		</div>
+		<script type="text/javascript" src="js/jquery-1.10.2.js"></script>
+		<script>
+			$(document).ready(function() {
+				$.post("home", {
+					request: 'username',
+			    },
+			    function(data, status) {
+			    	$("#username").html(data);
+			    });
+			});
+		</script>
+	</body>
+</html>

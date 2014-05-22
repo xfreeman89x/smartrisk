@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<link href="css/style.css" rel="stylesheet">
+		<title>Login</title>
+	</head>
+	<body>
+		<div id="body_wrap">
+			<div id="wrapper">
+				<div id="login_box">
+					<div id="logo">
+						<img alt="SmartRisk" src="img/logo.png" width="120">
+					</div>
+					<form id="login_form">
+						<br>
+						Username
+						<br>
+						<input id="userid" name="username" type="text" value="" tabindex="1">
+						<br>
+						<br>
+						Password
+						<br>
+						<input id="password" name="password" type="password" value="" tabindex="2">
+						<br>
+						<br>
+						<input id="button_login" class="button orange" type="button" value="Login">
+					</form>
+				</div>
+				<div id="notification">
+				</div>
+			</div>
+		</div>
+		<script type="text/javascript" src="js/applyStyle.js"></script>
+		<script type="text/javascript" src="js/jquery-1.10.2.js"></script>
+		<script>
+			$(document).ready(function() {
+				$("#button_login").click(function() {
+					$.post("login", {
+						username: $("#userid").val(),
+						password: $("#password").val()
+				    },
+				    function(data, status) {
+				    	$("#userid").val('');
+				    	$("#password").val('');
+				    	if(data === '1') {
+					    	$("#notification").html('Invalid Username/Password!');
+							applyStyleLogin('notification');
+							setTimeout(function() {
+								$("#notification").html('');
+								deleteStyleLogin('notification');
+							}, 3000);
+				    	}
+				    	else if(data === '2') {
+				    		window.location.replace("./home");
+				    	}
+				    });
+				});
+			});
+		</script>
+	</body>
+</html>
