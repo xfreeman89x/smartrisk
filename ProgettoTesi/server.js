@@ -548,7 +548,7 @@ app.post('/conduct-assessment', function(req, res) {
 							}
 							catch (e) {
 								console.error("Parsing error: ", e);
-								res.json("parsing error");
+								res.json({error: "parsing error"});
 							}
 							res.json(jsonRes);
 						}
@@ -843,6 +843,7 @@ app.post('/conduct-assessment', function(req, res) {
 		}
 	}
 	else if(req.body.request === 'addAsset') {
+		// type of asset to add
 		var option = req.body.arg1;
 		option = string(option).trim().s;
 		option = string(option).stripTags().s;
@@ -2374,6 +2375,76 @@ app.post('/conduct-assessment', function(req, res) {
 				}
 				break;
 			case "software":
+				var installation_id, cpe, license, destination;
+				var errorReq = false, errorDestination;
+				var flag = req.body.arg3; // true = os, false = application
+				
+				installation_id = req.body.arg2["installation_id"];
+				// insert robustness controls
+				installation_id = "'" + installation_id + "'";
+				
+				cpe = req.body.arg2["cpe"];
+				// insert robustness controls
+				if(flag === 'true') {
+					if(cpe.search('cpe:/o:') !== 0) {
+						errorReq = true;
+					}
+				}
+				else if(flag === 'false') {
+					if(cpe.search('cpe:/a:') !== 0) {
+						errorReq = true;
+					}
+				}
+				cpe = "'" + cpe + "'";
+				
+				license = req.body.arg2["license"];
+				// insert robustness controls
+				license = "'" + license + "'";
+				
+				if(typeof req.body.arg2['destinations'] !== 'undefined') {
+					destination = req.body.arg2['destinations'];
+					destination = string(destination).trim().s;
+					destination = string(destination).stripTags().s;
+					destination = string(destination).replaceAll("'", "");
+					destination = string(destination).replaceAll('"', "");
+					destination = "'" + destination + "'";
+				}
+				else {
+					errorDestination = true;
+				}
+
+				if(errorReq === false && errorDestination === false) {
+					pool.getConnection(function(err, connection) {
+						connection.beginTransaction(function(err) {
+							if(err) {
+								throw err;
+								res.json({result: 'error'});
+							}
+							else {
+								/*var sqlQuery1 = "INSERT INTO asset(IdAsset, NomeAssessment, UserId, Resource, " + 
+									"ExtendedInfo, Timestamp, IdLocation, AssetType) " +
+									"VALUES (NULL, '" + req.session.currentAssessment + "'," + 
+									req.session.userid + ", '" + req.session.currentAssessment + ":software." + 
+									timestamp.replace(" ", "_") + "', NULL, '" + timestamp + "', NULL, 'software');";
+								connection.query(sqlQuery1, function(err, result, fields) {
+									if(err) {
+										console.log('query1: failure');
+										connection.rollback(function() {
+											throw err;
+										});
+										res.json({result: 'error'});
+									}
+									else {
+										// to continue
+									}
+								});*/
+							}
+						});
+					});
+				}
+				else {
+					res.json({result: 'error'});
+				}
 				break;
 			case "service":
 				break;
@@ -2405,13 +2476,14 @@ app.post('/conduct-assessment', function(req, res) {
 					res.json({result: "error"});
 				}
 				else {
-					console.log(result[0].IpAddress);
+					// console.log(result[0].IpAddress);
 					var ip = result[0].IpAddress;
 					connection.release();
 					var timeAppend = (new Date()).getTime();
 					var cmd = "nmap -O " + ip + " -oX " + 
 						req.session.folder + "/temp" + timeAppend + "os.xml";
 					var child = exec(cmd, function(error, stdout, stderr) {
+						var cpeJSON = '{"cpe":[';
 						var parser = new xml2js.Parser();
 						var data = fs.readFileSync(req.session.folder + '/temp' + timeAppend + 'os.xml');
 						parser.parseString(data, function(err, result) { // sync call default: online documentation
@@ -2421,10 +2493,15 @@ app.post('/conduct-assessment', function(req, res) {
 									// console.log(result.nmaprun.host[0].os[0].osmatch[0]);
 									for(var i = 0; i < result.nmaprun.host[0].os[0].osmatch.length; i++) {
 										// console.log(result.nmaprun.host[0].os[0].osmatch[0].osclass[0].cpe[0]);
+										var name = result.nmaprun.host[0].os[0].osmatch[0].$.name;
+										// console.log('name: ' + result.nmaprun.host[0].os[0].osmatch[0].$.name);
+										var accuracy = result.nmaprun.host[0].os[0].osmatch[0].$.accuracy;
+										// console.log('accuracy: ' + result.nmaprun.host[0].os[0].osmatch[0].$.accuracy);
 										for(var j = 0; j < result.nmaprun.host[0].os[0].osmatch[i].osclass.length; j++) {
 											for(var k = 0; k < result.nmaprun.host[0].os[0].osmatch[i].osclass[j].cpe.length; k++) {
 												var cpe = result.nmaprun.host[0].os[0].osmatch[i].osclass[j].cpe[k];
 												// console.log(cpe);
+												cpeJSON += '{"name": "' + name + '", "accuracy": "' + accuracy + '", "cpe": "' + cpe + '"},';
 											}
 										}
 									}
@@ -2439,12 +2516,24 @@ app.post('/conduct-assessment', function(req, res) {
 							// deleting temp file
 							fs.unlinkSync(req.session.folder + '/temp' + timeAppend + 'os.xml');
 							// console.log('successfully deleted' + req.session.folder + '/temp' + timeAppend + 'os.xml');
+							if(cpeJSON.lastIndexOf(',') !== -1) {
+								cpeJSON = cpeJSON.substring(0, cpeJSON.lastIndexOf(','));
+							}
+							cpeJSON += ']}';
+							var jsonRes;
+							try {
+								jsonRes = JSON.parse(cpeJSON);
+							}
+							catch (e) {
+								res.json({error: 'parsing error'});
+								console.error("Parsing error: ", e);
+							}
+							res.json(jsonRes);
 						});
 					});
 				}
 			});
 		});
-		res.json({result: "ok"});
 	}
 	else if(req.body.request === 'softwareDictionary') {
 		var type = req.body.arg1;
@@ -2518,7 +2607,7 @@ app.post('/conduct-assessment', function(req, res) {
 		}
 		catch (e) {
 			console.error("Parsing error: ", e);
-			res.json("parsing error");
+			res.json({error: "parsing error"});
 		}
 		res.json(jsonRes);
 	}
@@ -2721,7 +2810,7 @@ app.post('/conduct-assessment', function(req, res) {
 					}
 					catch (e) {
 						console.error("Parsing error: ", e);
-						res.json("parsing error");
+						res.json({error: "parsing error"});
 					}
 					res.json(jsonRes);
 				}

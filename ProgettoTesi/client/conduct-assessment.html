@@ -12,6 +12,7 @@
 			<div id="dialogProperties" title="Properties"></div>
 			<div id="dialogDelete" title="Delete"></div>
 			<div id="dialogSoftware" title="Choose one product"></div>
+			<div id="dialogOsDiscovery" title="Choose one OS"></div>
 			<div id='cssmenu'>
 				<ul>
 					<li><a href='home'><span>Home</span></a></li>
@@ -138,9 +139,9 @@
 				}
 			}
 			
-			function selectCpe(obj) {
+			function selectCpe(obj, dialogName) {
 				$("#cpe").val(obj);
-				$("#dialogSoftware").dialog("close");
+				$(dialogName).dialog("close");
 			}
 			
 			$(document).ready(function() {
@@ -487,7 +488,7 @@
 						$("#dialogSoftware").empty();
 						var str = '<table id="softwareTable">';
 						for(var i = 0; i < data.values.length; i++) {
-							str += "<tr><td><button id='" + data.values[i].cpe_value + "' class='cpeElement' onclick='selectCpe(this.id)'>" + data.values[i].cpe_value + 
+							str += "<tr><td><button id='" + data.values[i].cpe_value + "' class='cpeElement' onclick='selectCpe(this.id, \"#dialogSoftware\")'>" + data.values[i].cpe_value + 
 								"</button></td><td>" + data.values[i].description + "</td></tr>";
 						}
 						str += '</table>';
@@ -511,7 +512,27 @@
 							arg: device
 						},
 						function(data, status) {
-							
+							if(typeof data.cpe !== 'undefined') {
+								if(data.cpe.length === 1) {
+									$("#cpe").val(data.cpe[0].cpe);
+								}
+								else if(data.cpe.length > 1) {
+									$("#dialogOsDiscovery").empty();
+									var str = '<table id="osDiscoveryTable">';
+									str += '<td>cpe</td><td>name</td><td>accuracy</td>'
+									for(var i = 0; i < data.cpe.length; i++) {
+										str += "<tr><td><button id='" + data.cpe[i].cpe + "' class='cpeElement' onclick='selectCpe(this.id, \"#dialogOsDiscovery\")'>" + data.cpe[i].cpe + 
+											"</button></td><td>" + data.cpe[i].name + "</td><td>" + data.cpe[i].accuracy + "</td></tr>";
+									}
+									str += '</table>';
+									$("#dialogOsDiscovery").append(str);
+			                        $("#dialogOsDiscovery").dialog({
+			                        	modal: true,
+			                        	width: '800',
+			                        	resizable: false
+			                        });
+								}
+							}
 						});
 					}
 				});
@@ -650,6 +671,8 @@
 								},
 								function(data, status) {
 									if(data.result == 'ok') {
+										$('#assetTree').empty().jstree('destroy');
+										drawAssetTree();
 										document.getElementById("assetType").selectedIndex = 0;
 										var flag = document.getElementById("button_add_asset").hasAttribute("enabled");
 										if(flag == true) {
@@ -715,6 +738,8 @@
 								},
 								function(data, status) {
 									if(data.result == 'ok') {
+										$('#assetTree').empty().jstree('destroy');
+										drawAssetTree();
 										document.getElementById("assetType").selectedIndex = 0;
 										var flag = document.getElementById("button_add_asset").hasAttribute("enabled");
 										if(flag == true) {
@@ -726,6 +751,37 @@
 										}
 										$("#info").empty();
 									}
+								});
+								break;
+							case "software":
+								var flag = document.getElementById("os_radio").checked;
+								var parameters = '{';
+								var tableInfo = document.getElementById("info");
+								// index starts at 1 because of radio button
+								// and ends at length - 1 because of os discovery button
+								for(var i = 1; i < (tableInfo.rows.length - 1); i++) {
+									if(!tableInfo.rows[i].hasAttribute("hidden")) {
+										var cell = tableInfo.rows[i].cells[1];
+										var input = cell.firstChild;
+										parameters += '"' + input.id + '":"' + input.value + '",';
+									}
+								}
+								parameters = parameters.substring(0, parameters.lastIndexOf(','));
+								parameters += '}';
+								try {
+									jsonParameters = JSON.parse(parameters);
+								}
+								catch (e) {
+									console.error("Parsing error: ", e);
+								}
+								$.post("conduct-assessment", {
+									request: 'addAsset',
+									arg1: option,
+									arg2: jsonParameters,
+									arg3: flag
+								},
+								function() {
+									// to continue
 								});
 								break;
 							default:
