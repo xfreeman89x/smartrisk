@@ -432,27 +432,42 @@ app.post('/conduct-assessment', function(req, res) {
 	else if(req.body.request === 'assetTree') {
 		var temp = [];
 		var treeArrayJson = '{"values":[';
-		var serializedValues = ["organization", "person", "network", "system", "computing-device"];
+		var serializedValues = ["organization", "person", "network", "system", "computing-device", "circuit", "software", "service", "database", "website"];
 		var inputValues = {
 			"organization" : ["#", "#", "#", "#"],
 			"person" : ["IdPerson", "part-of", "IdOrganization", "organization"],
 			"network" : ["IdAsset", "organization-is-owner-of", "IdOrganization", "organization"],
 			"system" : ["IdSystem", "connected-to-network", "IdNetwork", "network"],
-			"computing-device" : ["IdComputingDevice", "computing-device-connected-to", "IdSystem", "system"]
+			"computing-device" : ["IdComputingDevice", "computing-device-connected-to", "IdSystem", "system"],
+			"circuit" : ["IdCircuit", "has-termination-device", "IdComputingDevice", "computing-device"],
+			"software" : ["IdSoftware", "installed-on-device", "IdComputingDevice", "computing-device"],
+			"service" : ["IdService", "service-has-service-provider", "IdSoftware", "software"],
+			"database" : ["IdDatabase", "database-served-by", "IdService", "service"],
+			"website" : ["IdWebsite", "website-served-by", "IdService", "service"]
 		};
 		var outputValues = {
 			"organization" : "Name",
 			"person" : "Name",
 			"network" : "NetworkName",
 			"system" : "SystemName",
-			"computing-device" : "Hostname"
+			"computing-device" : "Hostname",
+			"circuit" : "CircuitName",
+			"software" : "Cpe",
+			"service" : "Fdqn",
+			"database" : "InstanceName",
+			"website" : "DocumentRoot"
 		};
 		var outputParentValues = {
 			"organization" : "#",
 			"person" : "Name",
 			"network" : "Name",
 			"system" : "NetworkName",
-			"computing-device" : "SystemName"
+			"computing-device" : "SystemName",
+			"circuit" : "Hostname",
+			"software" : "Hostname",
+			"service" : "Cpe",
+			"database" : "Fdqn",
+			"website" : "Fdqn"
 		};
 		pool.getConnection(function(err, connection) {
 			var sqlQuery1 = "SELECT IdAsset, AssetType " +
@@ -490,7 +505,7 @@ app.post('/conduct-assessment', function(req, res) {
 						function(asset, callback) {
 							var selectValue = outputValues[asset.AssetType];
 							var selectParentValue = outputParentValues[asset.AssetType];
-							var sqlQuery2 = "SELECT " + selectValue + " " +
+							var sqlQuery2 = "SELECT " + selectValue + ", IdAsset " +
 										"FROM `" + asset.AssetType + "` " +
 										"WHERE IdAsset = " + asset.IdAsset + ";";
 							connection.query(sqlQuery2, function(err, result, fields) {
@@ -501,14 +516,16 @@ app.post('/conduct-assessment', function(req, res) {
 								}
 								else {
 									// console.log("Name: " + result[0][selectValue]);
+									// console.log("Id: " + result[0]["IdAsset"]);
 									treeArrayJson += '{"name" : "' + result[0][selectValue] + '",';
 									treeArrayJson += '"type" : "' + asset.AssetType + '",';
+									treeArrayJson += '"id" : "' + result[0]["IdAsset"] + '",';
 									if(asset.AssetType !== 'organization') {
 										var idLastSelect = inputValues[asset.AssetType][0];
 										var fromLastValue = inputValues[asset.AssetType][1];
 										var idSelect = inputValues[asset.AssetType][2];
 										var fromValue = inputValues[asset.AssetType][3];
-										var sqlQuery3 = "SELECT " + selectParentValue + " " +
+										var sqlQuery3 = "SELECT " + selectParentValue + ", IdAsset " +
 														"FROM `" + fromValue + "` " +
 														"WHERE " + idSelect + " IN (SELECT " + idSelect + " " +
 																				   "FROM `" + fromLastValue + "` " +
@@ -523,7 +540,7 @@ app.post('/conduct-assessment', function(req, res) {
 											}
 											else {
 												// console.log("Parent: " + result[0][selectParentValue]);
-												treeArrayJson += '"parent" : "' + result[0][selectParentValue] + '"},';
+												treeArrayJson += '"parent" : "' + fromValue + result[0]["IdAsset"] + '"},';
 												callback();
 											}
 										});
@@ -2376,7 +2393,7 @@ app.post('/conduct-assessment', function(req, res) {
 				break;
 			case "software":
 				var installation_id, cpe, license, destination;
-				var errorReq = false, errorDestination;
+				var errorReq = false, errorDestination = false;
 				var flag = req.body.arg3; // true = os, false = application
 				
 				installation_id = req.body.arg2["installation_id"];
@@ -2421,7 +2438,7 @@ app.post('/conduct-assessment', function(req, res) {
 								res.json({result: 'error'});
 							}
 							else {
-								/*var sqlQuery1 = "INSERT INTO asset(IdAsset, NomeAssessment, UserId, Resource, " + 
+								var sqlQuery1 = "INSERT INTO asset(IdAsset, NomeAssessment, UserId, Resource, " + 
 									"ExtendedInfo, Timestamp, IdLocation, AssetType) " +
 									"VALUES (NULL, '" + req.session.currentAssessment + "'," + 
 									req.session.userid + ", '" + req.session.currentAssessment + ":software." + 
@@ -2435,9 +2452,85 @@ app.post('/conduct-assessment', function(req, res) {
 										res.json({result: 'error'});
 									}
 									else {
-										// to continue
+										var lastInsertIdQuery = "SELECT LAST_INSERT_ID();";
+										connection.query(lastInsertIdQuery, function(err, result, fields) {
+											if(err) {
+												console.log('query insert id: failure');
+												connection.rollback(function() {
+													throw err;
+												});
+												res.json({result: 'error'});
+											}
+											else {
+												var idAsset = result[0]["LAST_INSERT_ID()"];
+												var sqlQuery2 = "INSERT INTO software(IdSoftware, IdAsset, InstallationId, Cpe, License)" +
+													"VALUES (NULL, LAST_INSERT_ID(), " + installation_id + "," + cpe + "," + license + ");";
+												connection.query(sqlQuery2, function(err, result, fields) {
+													if(err) {
+														console.log('query2: failure');
+														connection.rollback(function() {
+															throw err;
+														});
+														res.json({result: 'error'});
+													}
+													else {
+														var sqlQuery3 = "SELECT IdComputingDevice " +
+																	    "FROM `computing-device` " +
+																	    "WHERE Hostname = " + destination + " " +
+																	    "AND IdAsset IN (SELECT IdAsset " +
+																	    			    "FROM asset " +
+																	    			    "WHERE UserId = " + req.session.userid + " " +
+																	    			    "AND NomeAssessment = '" + req.session.currentAssessment + "');";
+														connection.query(sqlQuery3, function(err, result, fields) {
+															if(err) {
+																console.log('query3: failure');
+																connection.rollback(function() {
+																	throw err;
+																});
+																res.json({result: 'error'});
+															}
+															else if(result.length == 0) {
+																console.log('query3: failure');
+																connection.rollback(function() {
+																	throw err;
+																});
+																res.json({result: 'error'});
+															}
+															else if(result.length > 0) {
+																var idComputingDevice = result[0]['IdComputingDevice'];
+																var sqlQuery4 = "INSERT INTO `installed-on-device`(IdSoftware, IdComputingDevice) " +
+																	"VALUES (LAST_INSERT_ID(), " + idComputingDevice + ");";
+																connection.query(sqlQuery4, function(err, result, fields) {
+																	if(err) {
+																		console.log('query4: failure');
+																		connection.rollback(function() {
+																			throw err;
+																		});
+																		res.json({result: 'error'});
+																	}
+																	else {
+																		connection.commit(function(err) {
+																			if(err) {
+																				console.log('commit: failure');
+																				connection.rollback(function() {
+																					throw err;
+																				});
+																				res.json({result: 'error'});
+																			}
+																			else {
+																				res.json({result: 'ok'});
+																			}
+																		});
+																	}
+																});
+															}
+														});
+													}
+												});
+											}
+										});
 									}
-								});*/
+								});
 							}
 						});
 					});
@@ -2447,10 +2540,404 @@ app.post('/conduct-assessment', function(req, res) {
 				}
 				break;
 			case "service":
+				var fdqn, ip, protocol, destination;
+				var errorReq = false, errorDestination = false;
+				
+				fdqn = req.body.arg2["fdqn"];
+				// insert robustness controls
+				fdqn = "'" + fdqn + "'";
+				
+				ip = req.body.arg2["ip"];
+				// insert robustness controls
+				ip = "'" + ip + "'";
+				
+				protocol = req.body.arg2["protocol"];
+				// insert robustness controls
+				protocol = "'" + protocol + "'";
+				
+				if(typeof req.body.arg2['destinations'] !== 'undefined') {
+					destination = req.body.arg2['destinations'];
+					// implement controls
+					// destination = string(destination).trim().s;
+					// destination = string(destination).stripTags().s;
+					// destination = string(destination).replaceAll("'", "");
+					// destination = string(destination).replaceAll('"', "");
+					destination = "'" + destination + "'";
+				}
+				else {
+					errorDestination = true;
+				}
+	
+				if(errorReq === false && errorDestination === false) {
+					pool.getConnection(function(err, connection) {
+						connection.beginTransaction(function(err) {
+							if(err) {
+								throw err;
+								res.json({result: 'error'});
+							}
+							else {
+								var sqlQuery1 = "INSERT INTO asset(IdAsset, NomeAssessment, UserId, Resource, " + 
+									"ExtendedInfo, Timestamp, IdLocation, AssetType) " +
+									"VALUES (NULL, '" + req.session.currentAssessment + "'," + 
+									req.session.userid + ", '" + req.session.currentAssessment + ":service." + 
+									timestamp.replace(" ", "_") + "', NULL, '" + timestamp + "', NULL, 'service');";
+								connection.query(sqlQuery1, function(err, result, fields) {
+									if(err) {
+										console.log('query1: failure');
+										connection.rollback(function() {
+											throw err;
+										});
+										res.json({result: 'error'});
+									}
+									else {
+										var lastInsertIdQuery = "SELECT LAST_INSERT_ID();";
+										connection.query(lastInsertIdQuery, function(err, result, fields) {
+											if(err) {
+												console.log('query insert id: failure');
+												connection.rollback(function() {
+													throw err;
+												});
+												res.json({result: 'error'});
+											}
+											else {
+												var idAsset = result[0]["LAST_INSERT_ID()"];
+												var sqlQuery2 = "INSERT INTO service(IdService, IdAsset, Ip, Fdqn, Protocol)" +
+													"VALUES (NULL, LAST_INSERT_ID(), " + ip + "," + fdqn + "," + protocol + ");";
+												connection.query(sqlQuery2, function(err, result, fields) {
+													if(err) {
+														console.log('query2: failure');
+														connection.rollback(function() {
+															throw err;
+														});
+														res.json({result: 'error'});
+													}
+													else {
+														var sqlQuery3 = "SELECT IdSoftware " +
+																	    "FROM `software` " +
+																	    "WHERE Cpe = " + destination + " " +
+																	    "AND IdAsset IN (SELECT IdAsset " +
+																	    			    "FROM asset " +
+																	    			    "WHERE UserId = " + req.session.userid + " " +
+																	    			    "AND NomeAssessment = '" + req.session.currentAssessment + "');";
+														connection.query(sqlQuery3, function(err, result, fields) {
+															if(err) {
+																console.log('query3: failure');
+																connection.rollback(function() {
+																	throw err;
+																});
+																res.json({result: 'error'});
+															}
+															else if(result.length == 0) {
+																console.log('query3: failure');
+																connection.rollback(function() {
+																	throw err;
+																});
+																res.json({result: 'error'});
+															}
+															else if(result.length > 0) {
+																var idSoftware = result[0]['IdSoftware'];
+																var sqlQuery4 = "INSERT INTO  `service-has-service-provider`(IdService, IdSoftware) " +
+																	"VALUES (LAST_INSERT_ID(), " + idSoftware + ");";
+																connection.query(sqlQuery4, function(err, result, fields) {
+																	if(err) {
+																		console.log('query4: failure');
+																		connection.rollback(function() {
+																			throw err;
+																		});
+																		res.json({result: 'error'});
+																	}
+																	else {
+																		connection.commit(function(err) {
+																			if(err) {
+																				console.log('commit: failure');
+																				connection.rollback(function() {
+																					throw err;
+																				});
+																				res.json({result: 'error'});
+																			}
+																			else {
+																				res.json({result: 'ok'});
+																			}
+																		});
+																	}
+																});
+															}
+														});
+													}
+												});
+											}
+										});
+									}
+								});
+							}
+						});
+					});
+				}
+				else {
+					res.json({result: 'error'});
+				}
 				break;
 			case "website":
+				var document_root, locale, destination;
+				var errorReq = false, errorDestination = false;
+				
+				document_root = req.body.arg2["document_root"];
+				// insert robustness controls
+				document_root = "'" + document_root + "'";
+				
+				locale = req.body.arg2["locale"];
+				// insert robustness controls
+				locale = "'" + locale + "'";
+								
+				if(typeof req.body.arg2['destinations'] !== 'undefined') {
+					destination = req.body.arg2['destinations'];
+					destination = string(destination).trim().s;
+					destination = string(destination).stripTags().s;
+					destination = string(destination).replaceAll("'", "");
+					destination = string(destination).replaceAll('"', "");
+					destination = "'" + destination + "'";
+				}
+				else {
+					errorDestination = true;
+				}
+	
+				if(errorReq === false && errorDestination === false) {
+					pool.getConnection(function(err, connection) {
+						connection.beginTransaction(function(err) {
+							if(err) {
+								throw err;
+								res.json({result: 'error'});
+							}
+							else {
+								var sqlQuery1 = "INSERT INTO asset(IdAsset, NomeAssessment, UserId, Resource, " + 
+									"ExtendedInfo, Timestamp, IdLocation, AssetType) " +
+									"VALUES (NULL, '" + req.session.currentAssessment + "'," + 
+									req.session.userid + ", '" + req.session.currentAssessment + ":website." + 
+									timestamp.replace(" ", "_") + "', NULL, '" + timestamp + "', NULL, 'website');";
+								connection.query(sqlQuery1, function(err, result, fields) {
+									if(err) {
+										console.log('query1: failure');
+										connection.rollback(function() {
+											throw err;
+										});
+										res.json({result: 'error'});
+									}
+									else {
+										var lastInsertIdQuery = "SELECT LAST_INSERT_ID();";
+										connection.query(lastInsertIdQuery, function(err, result, fields) {
+											if(err) {
+												console.log('query insert id: failure');
+												connection.rollback(function() {
+													throw err;
+												});
+												res.json({result: 'error'});
+											}
+											else {
+												var idAsset = result[0]["LAST_INSERT_ID()"];
+												var sqlQuery2 = "INSERT INTO website(IdWebsite, IdAsset, DocumentRoot, Locale)" +
+													"VALUES (NULL, LAST_INSERT_ID(), " + document_root + "," + locale + ");";
+												connection.query(sqlQuery2, function(err, result, fields) {
+													if(err) {
+														console.log('query2: failure');
+														connection.rollback(function() {
+															throw err;
+														});
+														res.json({result: 'error'});
+													}
+													else {
+														var sqlQuery3 = "SELECT IdService " +
+																	    "FROM `service` " +
+																	    "WHERE Fdqn = " + destination + " " +
+																	    "AND IdAsset IN (SELECT IdAsset " +
+																	    			    "FROM asset " +
+																	    			    "WHERE UserId = " + req.session.userid + " " +
+																	    			    "AND NomeAssessment = '" + req.session.currentAssessment + "');";
+														connection.query(sqlQuery3, function(err, result, fields) {
+															if(err) {
+																console.log('query3: failure');
+																connection.rollback(function() {
+																	throw err;
+																});
+																res.json({result: 'error'});
+															}
+															else if(result.length == 0) {
+																console.log('query3: failure');
+																connection.rollback(function() {
+																	throw err;
+																});
+																res.json({result: 'error'});
+															}
+															else if(result.length > 0) {
+																var idService = result[0]['IdService'];
+																var sqlQuery4 = "INSERT INTO  `website-served-by`(IdWebsite, IdService) " +
+																	"VALUES (LAST_INSERT_ID(), " + idService + ");";
+																connection.query(sqlQuery4, function(err, result, fields) {
+																	if(err) {
+																		console.log('query4: failure');
+																		connection.rollback(function() {
+																			throw err;
+																		});
+																		res.json({result: 'error'});
+																	}
+																	else {
+																		connection.commit(function(err) {
+																			if(err) {
+																				console.log('commit: failure');
+																				connection.rollback(function() {
+																					throw err;
+																				});
+																				res.json({result: 'error'});
+																			}
+																			else {
+																				res.json({result: 'ok'});
+																			}
+																		});
+																	}
+																});
+															}
+														});
+													}
+												});
+											}
+										});
+									}
+								});
+							}
+						});
+					});
+				}
+				else {
+					res.json({result: 'error'});
+				}
 				break;
 			case "database":
+				var instance_name, destination;
+				var errorReq = false, errorDestination = false;
+				
+				instance_name = req.body.arg2["instance_name"];
+				// insert robustness controls
+				instance_name = "'" + instance_name + "'";
+				
+				if(typeof req.body.arg2['destinations'] !== 'undefined') {
+					destination = req.body.arg2['destinations'];
+					destination = string(destination).trim().s;
+					destination = string(destination).stripTags().s;
+					destination = string(destination).replaceAll("'", "");
+					destination = string(destination).replaceAll('"', "");
+					destination = "'" + destination + "'";
+				}
+				else {
+					errorDestination = true;
+				}
+	
+				if(errorReq === false && errorDestination === false) {
+					pool.getConnection(function(err, connection) {
+						connection.beginTransaction(function(err) {
+							if(err) {
+								throw err;
+								res.json({result: 'error'});
+							}
+							else {
+								var sqlQuery1 = "INSERT INTO asset(IdAsset, NomeAssessment, UserId, Resource, " + 
+									"ExtendedInfo, Timestamp, IdLocation, AssetType) " +
+									"VALUES (NULL, '" + req.session.currentAssessment + "'," + 
+									req.session.userid + ", '" + req.session.currentAssessment + ":database." + 
+									timestamp.replace(" ", "_") + "', NULL, '" + timestamp + "', NULL, 'database');";
+								connection.query(sqlQuery1, function(err, result, fields) {
+									if(err) {
+										console.log('query1: failure');
+										connection.rollback(function() {
+											throw err;
+										});
+										res.json({result: 'error'});
+									}
+									else {
+										var lastInsertIdQuery = "SELECT LAST_INSERT_ID();";
+										connection.query(lastInsertIdQuery, function(err, result, fields) {
+											if(err) {
+												console.log('query insert id: failure');
+												connection.rollback(function() {
+													throw err;
+												});
+												res.json({result: 'error'});
+											}
+											else {
+												var idAsset = result[0]["LAST_INSERT_ID()"];
+												var sqlQuery2 = "INSERT INTO `database`(IdDatabase, IdAsset, InstanceName)" +
+													"VALUES (NULL, LAST_INSERT_ID(), " + instance_name + ");";
+												connection.query(sqlQuery2, function(err, result, fields) {
+													if(err) {
+														console.log('query2: failure');
+														connection.rollback(function() {
+															throw err;
+														});
+														res.json({result: 'error'});
+													}
+													else {
+														var sqlQuery3 = "SELECT IdService " +
+																	    "FROM `service` " +
+																	    "WHERE Fdqn = " + destination + " " +
+																	    "AND IdAsset IN (SELECT IdAsset " +
+																	    			    "FROM asset " +
+																	    			    "WHERE UserId = " + req.session.userid + " " +
+																	    			    "AND NomeAssessment = '" + req.session.currentAssessment + "');";
+														connection.query(sqlQuery3, function(err, result, fields) {
+															if(err) {
+																console.log('query3: failure');
+																connection.rollback(function() {
+																	throw err;
+																});
+																res.json({result: 'error'});
+															}
+															else if(result.length == 0) {
+																console.log('query3: failure');
+																connection.rollback(function() {
+																	throw err;
+																});
+																res.json({result: 'error'});
+															}
+															else if(result.length > 0) {
+																var idService = result[0]['IdService'];
+																var sqlQuery4 = "INSERT INTO  `database-served-by`(IdDatabase, IdService) " +
+																	"VALUES (LAST_INSERT_ID(), " + idService + ");";
+																connection.query(sqlQuery4, function(err, result, fields) {
+																	if(err) {
+																		console.log('query4: failure');
+																		connection.rollback(function() {
+																			throw err;
+																		});
+																		res.json({result: 'error'});
+																	}
+																	else {
+																		connection.commit(function(err) {
+																			if(err) {
+																				console.log('commit: failure');
+																				connection.rollback(function() {
+																					throw err;
+																				});
+																				res.json({result: 'error'});
+																			}
+																			else {
+																				res.json({result: 'ok'});
+																			}
+																		});
+																	}
+																});
+															}
+														});
+													}
+												});
+											}
+										});
+									}
+								});
+							}
+						});
+					});
+				}
+				else {
+					res.json({result: 'error'});
+				}
 				break;
 			default:
 				res.json({result: 'error'});

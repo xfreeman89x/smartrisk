@@ -202,6 +202,21 @@
 							},
 							"computing-device" : {
 								"icon" : "img/treeicon/computing.png"
+							},
+							"circuit" : {
+								"icon" : "img/treeicon/circuit.png"
+							},
+							"software" : {
+								"icon" : "img/treeicon/software.png"
+							},
+							"service" : {
+								"icon" : "img/treeicon/service.png"
+							},
+							"database" : {
+								"icon" : "img/treeicon/database.png"
+							},
+							"website" : {
+								"icon" : "img/treeicon/website.png"
 							}
 						},
 						"plugins" : [ "types", "contextmenu" ],
@@ -301,7 +316,8 @@
 							var name = treeValues[i].name;
 							var parent = treeValues[i].parent;
 							var type = treeValues[i].type;
-							var node = { "id" : name, "text" : name };
+							var v = type + treeValues[i].id;
+							var node = { "id": v, "text" : name };
 							var id = $.jstree.reference("#assetTree").create_node(parent, node, 'last');
 							$.jstree.reference("#assetTree").set_type(id, type);
 						}
@@ -395,6 +411,9 @@
 									case "organization":
 									case "system":
 									case "circuit":
+									case "service":
+									case "database":
+									case "website":
 										for(var i = 0; i < data.values.length; i++) {
 											info += "<tr><td>" + data.values[i] + "</td><td><input id='" + data.values[i] + "' type='text'></td></tr>";
 										}
@@ -617,6 +636,9 @@
 							case "person":
 							case "system":
 							case "circuit":
+							case "service":
+							case "website":
+							case "database":
 								var parameters = '{';
 								var tableInfo = document.getElementById("info");
 								for(var i = 0; i < tableInfo.rows.length; i++) {
@@ -781,7 +803,18 @@
 									arg3: flag
 								},
 								function() {
-									// to continue
+									$('#assetTree').empty().jstree('destroy');
+									drawAssetTree();
+									document.getElementById("assetType").selectedIndex = 0;
+									var flag = document.getElementById("button_add_asset").hasAttribute("enabled");
+									if(flag == true) {
+										document.getElementById("button_add_asset").removeAttribute("enabled");
+										document.getElementById("button_add_asset").setAttribute("disabled", "true");
+									}
+									else {
+										document.getElementById("button_add_asset").setAttribute("disabled", "true");
+									}
+									$("#info").empty();
 								});
 								break;
 							default:
