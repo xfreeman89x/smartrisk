@@ -235,12 +235,13 @@
 					                        	buttons: {
 					                        		Yes: function() {
 					                        			// collecting to server list of nodes to delete (from leaf nodes to root nodes)
-					                        			var list = $.jstree.reference("#assetTree").get_json(node.text, {'flat':true});
+					                        			var list = $.jstree.reference("#assetTree").get_json(node.id, {'flat':true});
 								                    	n = list.length;
 								                    	var jsonArray = '{"values":[';
 								                    	for(var i = 0; i < parseInt(n); i++) {
 								                    		var k = parseInt(n) - parseInt(i) - 1;
-								                    		jsonArray += '{"name": "' + list[k].text + '", "type": "' + list[k].type + '"},'
+								                    		var id = list[k].id.substring(list[k].id.lastIndexOf(':') + 1);
+								                    		jsonArray += '{"name": "' + list[k].text + '", "type": "' + list[k].type + '", "id": "' + id + '"},'
 								                    	}
 								                    	if(jsonArray.lastIndexOf(',') !== -1) {
 															jsonArray = jsonArray.substring(0, jsonArray.lastIndexOf(','));
@@ -275,10 +276,12 @@
 					                	"action" : function (obj) {
 					                		$("#dialogProperties").empty();
 					                    	var node = $.jstree.reference("#assetTree").get_node(obj.reference);
+					                    	var id = node.id.substring(node.id.lastIndexOf(':') + 1);
 					                    	$.post("conduct-assessment", {
 		                						request: 'propertyAsset',
 		                						arg1: node.text,
-		                						arg2: node.type
+		                						arg2: node.type,
+		                						arg3: id
 		                					},
 		                					function(data, status) {
 		                						if(data.result === 'errorRequest') {
@@ -286,8 +289,8 @@
 		                						}
 		                						for(var i = 0; i < data.result.length; i++) {
 		                							var value = data.result[i].value;
-		                							if(value === 'null') {
-		                								value = '---'
+		                							if(value === 'null' || value === '') {
+		                								value = '---';
 		                							}
 		                							$("#dialogProperties").append(data.result[i].field + ": " + value + "<br>");
 		                						}
@@ -316,7 +319,7 @@
 							var name = treeValues[i].name;
 							var parent = treeValues[i].parent;
 							var type = treeValues[i].type;
-							var v = type + treeValues[i].id;
+							var v = type + ":" + treeValues[i].id;
 							var node = { "id": v, "text" : name };
 							var id = $.jstree.reference("#assetTree").create_node(parent, node, 'last');
 							$.jstree.reference("#assetTree").set_type(id, type);
@@ -383,7 +386,8 @@
 										// relations
 										info += "<tr><td>" + data.relation + "</td><td colspan='2'><select id='destinations' onchange='softwareCheck()'><option></option>";
 										for(var j = 0; j < data[data.relation].length; j++) {
-											info += "<option>" + data[data.relation][j] + "</option>";
+											info += "<option id='" + data[data.relation][j].id + "'>" + data[data.relation][j].name +
+												" (id:" + data[data.relation][j].id + ")</option>";
 										}
 										info += "</select></td></tr>";
 										info += '<tr><td colspan="3"><input id="button_os_discovery" class="button orange" type="button" value="OS discovery"></td></tr>';
@@ -400,7 +404,8 @@
 										// relations
 										info += "<tr><td>" + data.relation + "</td><td><select id='destinations'><option></option>";
 										for(var j = 0; j < data[data.relation].length; j++) {
-											info += "<option>" + data[data.relation][j] + "</option>";
+											info += "<option id='" + data[data.relation][j].id + "'>" + data[data.relation][j].name +
+												" (id:" + data[data.relation][j].id + ")</option>";
 										}
 										info += "</select></td></tr>";
 										info += '</table>';
@@ -421,7 +426,8 @@
 										if(data.relation != '') {
 											info += "<tr><td>" + data.relation + "</td><td><select id='destinations'><option></option>";
 											for(var j = 0; j < data[data.relation].length; j++) {
-												info += "<option>" + data[data.relation][j] + "</option>";
+												info += "<option id='" + data[data.relation][j].id + "'>" + data[data.relation][j].name +
+												" (id:" + data[data.relation][j].id + ")</option>";
 											}
 											info += "</select></td></tr>";
 										}
@@ -439,7 +445,8 @@
 										if(data.relation != '') {
 											info += "<tr id='destinations_manual'><td>" + data.relation + "</td><td><select id='destinations'><option></option>";
 											for(var j = 0; j < data[data.relation].length; j++) {
-												info += "<option>" + data[data.relation][j] + "</option>";
+												info += "<option id='" + data[data.relation][j].id + "'>" + data[data.relation][j].name +
+													" (id:" + data[data.relation][j].id + ")</option>";
 											}
 											info += "</select></td></tr>";
 										}
@@ -450,7 +457,8 @@
 										info += '<div id="auto_scan_div">' + data.relation + "&nbsp" +
 											'<select id="destinations_auto"><option></option>';
 										for(var j = 0; j < data[data.relation].length; j++) {
-											info += "<option>" + data[data.relation][j] + "</option>";
+											info += "<option id='" + data[data.relation][j].id + "'>" + data[data.relation][j].name +
+												" (id:" + data[data.relation][j].id + ")</option>";
 										}
 										info += "</select>";
 										info += "</div>"
@@ -575,7 +583,7 @@
 					}, 1000);
 					var option = '';
 					$('#destinations_auto option:selected').each(function() {
-						option = $(this).text().toLowerCase();
+						option = $(this).attr("id");
 					});
 					$.post("conduct-assessment", {
 						request: 'scan',
@@ -644,12 +652,24 @@
 								for(var i = 0; i < tableInfo.rows.length; i++) {
 									var cell = tableInfo.rows[i].cells[1];
 									var input = cell.firstChild;
-									parameters += '"' + input.id + '":"' + input.value + '",'
+									if(input.id === 'destinations') {
+										$('#destinations option:selected').each(function() {
+											var optionId = $(this).attr("id");
+											if(typeof optionId !== 'undefined') {
+												parameters += '"' + input.id + '":"' + optionId + '",';
+											}
+											else {
+												parameters += '"' + input.id + '":"",';
+											}
+										});
+									}
+									else {
+										parameters += '"' + input.id + '":"' + input.value + '",';
+									}
 								}
 								parameters = parameters.substring(0, parameters.lastIndexOf(','));
 								parameters += '}';
 								var jsonParameters = eval("(" + parameters + ")");
-								
 								$.post("conduct-assessment", {
 									request: 'addAsset',
 									arg1: option,
@@ -679,13 +699,25 @@
 									if(!tableInfo.rows[i].hasAttribute("hidden")) {
 										var cell = tableInfo.rows[i].cells[1];
 										var input = cell.firstChild;
-										parameters += '"' + input.id + '":"' + input.value + '",'
+										if(input.id === 'destinations') {
+											$('#destinations option:selected').each(function() {
+												var optionId = $(this).attr("id");
+												if(typeof optionId !== 'undefined') {
+													parameters += '"' + input.id + '":"' + optionId + '",';
+												}
+												else {
+													parameters += '"' + input.id + '":"",';
+												}
+											});
+										}
+										else {
+											parameters += '"' + input.id + '":"' + input.value + '",';
+										}
 									}
 								}
 								parameters = parameters.substring(0, parameters.lastIndexOf(','));
 								parameters += '}';
 								var jsonParameters = eval("(" + parameters + ")");
-								
 								$.post("conduct-assessment", {
 									request: 'addAsset',
 									arg1: option,
@@ -718,8 +750,16 @@
 										if(!tableInfo.rows[i].hasAttribute("hidden")) {
 											var cell = tableInfo.rows[i].cells[1];
 											var input = cell.firstChild;
-											if(input.id == 'destinations') {
-												destination = input.value;
+											if(input.id === 'destinations') {
+												$('#destinations option:selected').each(function() {
+													var optionId = $(this).attr("id");
+													if(typeof optionId !== 'undefined') {
+														parameters += '"' + input.id + '":"' + optionId + '",';
+													}
+													else {
+														parameters += '"' + input.id + '":"",';
+													}
+												});
 											}
 											else {
 												parameters += '"' + input.id + '":"' + input.value + '",';
@@ -731,7 +771,15 @@
 									var jsonParameters = eval("(" + parameters + ")");
 								}
 								else { // auto
-									destination = document.getElementById('destinations_auto').value;
+									$('#destinations_auto option:selected').each(function() {
+										var optionId = $(this).attr("id");
+										if(typeof optionId !== 'undefined') {
+											destination = optionId;
+										}
+										else {
+											destination = "";
+										}
+									});
 									var table = document.getElementById('host_found_table');
 									var ipTrovato = false;
 									var parameters = '{"hosts":[';
@@ -785,7 +833,20 @@
 									if(!tableInfo.rows[i].hasAttribute("hidden")) {
 										var cell = tableInfo.rows[i].cells[1];
 										var input = cell.firstChild;
-										parameters += '"' + input.id + '":"' + input.value + '",';
+										if(input.id === 'destinations') {
+											$('#destinations option:selected').each(function() {
+												var optionId = $(this).attr("id");
+												if(typeof optionId !== 'undefined') {
+													parameters += '"' + input.id + '":"' + optionId + '",';
+												}
+												else {
+													parameters += '"' + input.id + '":"",';
+												}
+											});
+										}
+										else {
+											parameters += '"' + input.id + '":"' + input.value + '",';
+										}
 									}
 								}
 								parameters = parameters.substring(0, parameters.lastIndexOf(','));

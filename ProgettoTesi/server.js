@@ -540,7 +540,7 @@ app.post('/conduct-assessment', function(req, res) {
 											}
 											else {
 												// console.log("Parent: " + result[0][selectParentValue]);
-												treeArrayJson += '"parent" : "' + fromValue + result[0]["IdAsset"] + '"},';
+												treeArrayJson += '"parent" : "' + fromValue + ':' + result[0]["IdAsset"] + '"},';
 												callback();
 											}
 										});
@@ -736,7 +736,7 @@ app.post('/conduct-assessment', function(req, res) {
 								destRelation = '"' + relation + '":[';
 								for(var i = 0; i < result.length; i++) {
 									if(result[i][fieldName] != null) {
-										destRelation += '"' + result[i][fieldName] + '",';
+										destRelation += '{"name":"' + result[i][fieldName] + '", "id":"' + result[i]["IdAsset"] + '" },';
 									}
 									else {
 										//nameNull = true;
@@ -773,7 +773,7 @@ app.post('/conduct-assessment', function(req, res) {
 						                       "FROM `connected-to-network` " +
 						                       "WHERE IdSystem IN (SELECT IdSystem " +
 						                       					  "FROM system " +
-						                       					  "WHERE SystemName = '" + req.body.arg + "'));";
+						                       					  "WHERE IdAsset = '" + req.body.arg + "'));";
 			pool.getConnection(function(err, connection) {
 				connection.query(sqlQuery, function(err, result, fields) {
 					if(err) {
@@ -1168,7 +1168,6 @@ app.post('/conduct-assessment', function(req, res) {
 					destination = string(destination).replaceAll(" ", "");
 					destination = string(destination).replaceAll("'", "");
 					destination = string(destination).replaceAll('"', "");
-					destination = "'" + destination + "'";
 				}
 				else {
 					errorDestination = true;
@@ -1223,7 +1222,7 @@ app.post('/conduct-assessment', function(req, res) {
 													else {
 														var sqlQuery3 = "SELECT IdOrganization " +
 																	    "FROM organization " +
-																	    "WHERE Name = " + destination + " " +
+																	    "WHERE IdAsset = " + destination + " " +
 																	    "AND IdAsset IN (SELECT IdAsset " +
 																	    			    "FROM asset " +
 																	    			    "WHERE UserId = " + req.session.userid + " " +
@@ -1327,7 +1326,6 @@ app.post('/conduct-assessment', function(req, res) {
 					destination = string(destination).replaceAll(" ", "");
 					destination = string(destination).replaceAll("'", "");
 					destination = string(destination).replaceAll('"', "");
-					destination = "'" + destination + "'";
 				}
 				else {
 					errorDestination = true;
@@ -1468,7 +1466,7 @@ app.post('/conduct-assessment', function(req, res) {
 													else {
 														var sqlQuery3 = "SELECT IdOrganization " +
 																	    "FROM organization " +
-																	    "WHERE Name = " + destination + " " +
+																	    "WHERE IdAsset = " + destination + " " +
 																	    "AND IdAsset IN (SELECT IdAsset " +
 																	    			    "FROM asset " +
 																	    			    "WHERE UserId = " + req.session.userid + " " +
@@ -1606,7 +1604,6 @@ app.post('/conduct-assessment', function(req, res) {
 							destination = string(destination).stripTags().s;
 							destination = string(destination).replaceAll("'", "");
 							destination = string(destination).replaceAll('"', "");
-							destination = "'" + destination + "'";
 						}
 						else {
 							errorDestination = true;
@@ -1684,7 +1681,7 @@ app.post('/conduct-assessment', function(req, res) {
 																			else {
 																				var sqlQuery4 = "SELECT IdSystem " + 
 																								"FROM system " + 
-																								"WHERE SystemName = " + destination + " " +
+																								"WHERE IdAsset = " + destination + " " +
 																								"AND IdAsset IN (SELECT IdAsset " + 
 																											   "FROM asset " + 
 																											   "WHERE NomeAssessment = '" + assessment + "' " +
@@ -1760,7 +1757,6 @@ app.post('/conduct-assessment', function(req, res) {
 							});
 						}
 						else if(checkCorrectness == false){
-							// questo e' un busillis
 							res.json({result: "error"});
 						}
 						else if(errorDestination == true) {
@@ -1787,6 +1783,7 @@ app.post('/conduct-assessment', function(req, res) {
 						}
 						else {
 							errorReq = true;
+							console.log('hostname');
 						}
 						
 						if(typeof req.body.arg2['distinguished_name'] !== 'undefined') {
@@ -1804,6 +1801,7 @@ app.post('/conduct-assessment', function(req, res) {
 						}
 						else {
 							errorReq = true;
+							console.log('dname');
 						}
 						
 						if(typeof req.body.arg2['ip_address'] !== 'undefined') {
@@ -1828,6 +1826,7 @@ app.post('/conduct-assessment', function(req, res) {
 						}
 						else {
 							errorReq = true;
+							console.log('ip');
 						}
 						
 						if(typeof req.body.arg2['mac_address'] !== 'undefined') {
@@ -1847,6 +1846,7 @@ app.post('/conduct-assessment', function(req, res) {
 						}
 						else {
 							errorReq = true;
+							console.log('mac');
 						}
 						
 						if(typeof req.body.arg2['motherboard_guid'] !== 'undefined') {
@@ -1864,18 +1864,20 @@ app.post('/conduct-assessment', function(req, res) {
 						}
 						else {
 							errorReq = true;
+							console.log('mboard');
 						}
 						
-						if(typeof req.body.arg3 !== 'undefined') {
-							destination = req.body.arg3;
+						if(typeof req.body.arg2['destinations'] !== 'undefined') {
+							destination = req.body.arg2['destinations'];
 							destination = string(destination).trim().s;
 							destination = string(destination).stripTags().s;
 							destination = string(destination).replaceAll("'", "");
 							destination = string(destination).replaceAll('"', "");
-							destination = "'" + destination + "'";
 						}
 						else {
 							errorReq = true;
+							console.log('dest');
+							console.log(req.body.arg2['destinations']);
 						}
 						
 						if(checkCorrectness == true && errorDestination == false && errorIp == false &&
@@ -1894,11 +1896,12 @@ app.post('/conduct-assessment', function(req, res) {
 										   					   "FROM `connected-to-network` " +
 										   					   "WHERE IdSystem IN (SELECT IdSystem " + 
 										   					   					  "FROM system " + 
-										   					   					  "WHERE SystemName = " + destination + "));";							
+										   					   					  "WHERE IdAsset = " + destination + "));";							
 							pool.getConnection(function(err, connection) {
 								connection.beginTransaction(function(err) {
 									connection.query(sqlQuery, function(err, result, fields) {
 										var ipBufferStart, ipBufferEnd;
+										// console.log(result[0].Cidr);
 										if(result[0].Cidr == null) {
 											var ipStart = result[0].IpNetStart;
 											var ipEnd = result[0].IpNetEnd;
@@ -1957,7 +1960,7 @@ app.post('/conduct-assessment', function(req, res) {
 															}
 															var sqlQuery2 = "INSERT INTO `computing-device`(IdComputingDevice, IdAsset, DistinguishedName, Fdqn, Hostname, MotherboardGuid) " + 
 															"VALUES(NULL, LAST_INSERT_ID(), " + distinguishedName + ", NULL, " + hostname + ", " + motherboardGuid + ");";
-															console.log("query2: " + sqlQuery2);
+															// console.log("query2: " + sqlQuery2);
 															connection.query(sqlQuery2, function(err, result, fields) {
 																if(err) {
 																	console.log('query2: failure');
@@ -1992,7 +1995,7 @@ app.post('/conduct-assessment', function(req, res) {
 																				else {
 																					var sqlQuery4 = "SELECT IdSystem " + 
 																									"FROM system " + 
-																									"WHERE SystemName = " + destination + " " +
+																									"WHERE IdAsset = " + destination + " " +
 																									"AND IdAsset IN (SELECT IdAsset " + 
 																												   "FROM asset " + 
 																												   "WHERE NomeAssessment = '" + assessment + "' " +
@@ -2129,7 +2132,6 @@ app.post('/conduct-assessment', function(req, res) {
 					destination = string(destination).stripTags().s;
 					destination = string(destination).replaceAll("'", "");
 					destination = string(destination).replaceAll('"', "");
-					destination = "'" + destination + "'";
 				}
 				else {
 					errorDestination = true;
@@ -2184,7 +2186,7 @@ app.post('/conduct-assessment', function(req, res) {
 													else {
 														var sqlQuery3 = "SELECT IdNetwork " +
 																	    "FROM network " +
-																	    "WHERE NetworkName = " + destination + " " +
+																	    "WHERE IdAsset = " + destination + " " +
 																	    "AND IdAsset IN (SELECT IdAsset " +
 																	    			    "FROM asset " +
 																	    			    "WHERE UserId = " + req.session.userid + " " +
@@ -2281,7 +2283,6 @@ app.post('/conduct-assessment', function(req, res) {
 					destination = string(destination).stripTags().s;
 					destination = string(destination).replaceAll("'", "");
 					destination = string(destination).replaceAll('"', "");
-					destination = "'" + destination + "'";
 				}
 				else {
 					errorDestination = true;
@@ -2338,7 +2339,7 @@ app.post('/conduct-assessment', function(req, res) {
 													else {
 														var sqlQuery3 = "SELECT IdComputingDevice " +
 													    "FROM `computing-device` " +
-													    "WHERE Hostname = " + destination + " " +
+													    "WHERE IdAsset = " + destination + " " +
 													    "AND IdAsset IN (SELECT IdAsset " +
 													    			    "FROM asset " +
 													    			    "WHERE UserId = " + req.session.userid + " " +
@@ -2424,7 +2425,6 @@ app.post('/conduct-assessment', function(req, res) {
 					destination = string(destination).stripTags().s;
 					destination = string(destination).replaceAll("'", "");
 					destination = string(destination).replaceAll('"', "");
-					destination = "'" + destination + "'";
 				}
 				else {
 					errorDestination = true;
@@ -2476,7 +2476,7 @@ app.post('/conduct-assessment', function(req, res) {
 													else {
 														var sqlQuery3 = "SELECT IdComputingDevice " +
 																	    "FROM `computing-device` " +
-																	    "WHERE Hostname = " + destination + " " +
+																	    "WHERE IdAsset = " + destination + " " +
 																	    "AND IdAsset IN (SELECT IdAsset " +
 																	    			    "FROM asset " +
 																	    			    "WHERE UserId = " + req.session.userid + " " +
@@ -2562,7 +2562,6 @@ app.post('/conduct-assessment', function(req, res) {
 					// destination = string(destination).stripTags().s;
 					// destination = string(destination).replaceAll("'", "");
 					// destination = string(destination).replaceAll('"', "");
-					destination = "'" + destination + "'";
 				}
 				else {
 					errorDestination = true;
@@ -2614,7 +2613,7 @@ app.post('/conduct-assessment', function(req, res) {
 													else {
 														var sqlQuery3 = "SELECT IdSoftware " +
 																	    "FROM `software` " +
-																	    "WHERE Cpe = " + destination + " " +
+																	    "WHERE IdAsset = " + destination + " " +
 																	    "AND IdAsset IN (SELECT IdAsset " +
 																	    			    "FROM asset " +
 																	    			    "WHERE UserId = " + req.session.userid + " " +
@@ -2695,7 +2694,6 @@ app.post('/conduct-assessment', function(req, res) {
 					destination = string(destination).stripTags().s;
 					destination = string(destination).replaceAll("'", "");
 					destination = string(destination).replaceAll('"', "");
-					destination = "'" + destination + "'";
 				}
 				else {
 					errorDestination = true;
@@ -2747,7 +2745,7 @@ app.post('/conduct-assessment', function(req, res) {
 													else {
 														var sqlQuery3 = "SELECT IdService " +
 																	    "FROM `service` " +
-																	    "WHERE Fdqn = " + destination + " " +
+																	    "WHERE IdAsset = " + destination + " " +
 																	    "AND IdAsset IN (SELECT IdAsset " +
 																	    			    "FROM asset " +
 																	    			    "WHERE UserId = " + req.session.userid + " " +
@@ -2824,7 +2822,6 @@ app.post('/conduct-assessment', function(req, res) {
 					destination = string(destination).stripTags().s;
 					destination = string(destination).replaceAll("'", "");
 					destination = string(destination).replaceAll('"', "");
-					destination = "'" + destination + "'";
 				}
 				else {
 					errorDestination = true;
@@ -2876,7 +2873,7 @@ app.post('/conduct-assessment', function(req, res) {
 													else {
 														var sqlQuery3 = "SELECT IdService " +
 																	    "FROM `service` " +
-																	    "WHERE Fdqn = " + destination + " " +
+																	    "WHERE IdAsset = " + destination + " " +
 																	    "AND IdAsset IN (SELECT IdAsset " +
 																	    			    "FROM asset " +
 																	    			    "WHERE UserId = " + req.session.userid + " " +
@@ -3118,41 +3115,23 @@ app.post('/conduct-assessment', function(req, res) {
 		else {
 			pool.getConnection(function(err, connection) {
 				connection.beginTransaction(function(err) {
+					var typeError = false;
 					async.eachSeries(jsonReq.values, function(asset, callback) {
 						var name = asset.name;
 						var type = asset.type;
-						var typeError = false;
-						// console.log(name + " " + type);
+						var id = asset.id;
+						// console.log(name + " " + type + " " + id);
 						switch(type) {
 							case "organization":
-								nameColumn = 'Name';
-								break;
 							case "network":
-								nameColumn = 'NetworkName';
-								break;
 							case "person":
-								nameColumn = 'Name';
-								break;
 							case "system":
-								nameColumn = 'SystemName';
-								break;
 							case "computing-device":
-								nameColumn = 'Hostname';
-								break;
 							case "circuit":
-								nameColumn = 'CircuitName';
-								break;
 							case "software":
-								nameColumn = 'InstallationId';
-								break;
 							case "service":
-								nameColumn = 'Fdqn';
-								break;
 							case "database":
-								nameColumn = 'InstanceName';
-								break;
 							case "website":
-								nameColumn = 'DocumentRoot';
 								break;
 							default:
 								typeError = true;
@@ -3165,7 +3144,7 @@ app.post('/conduct-assessment', function(req, res) {
 										   "AND NomeAssessment = '" + assessment + "' " + 
 										   "AND IdAsset IN (SELECT IdAsset " +
 										   				   "FROM `" + type + "` " +
-										   				   "WHERE " + nameColumn + " = '" + name + "');";
+										   				   "WHERE IdAsset = '" + id + "');";
 							connection.query(sqlQuery, function(err, result, fields) {
 								if(err) {
 									console.log(err);
@@ -3180,7 +3159,7 @@ app.post('/conduct-assessment', function(req, res) {
 						}
 					});
 					connection.commit(function(err) {
-						if(err) {
+						if(err || typeError === true) {
 							console.log('commit: failure');
 							connection.rollback(function() {
 								throw err;
@@ -3201,74 +3180,75 @@ app.post('/conduct-assessment', function(req, res) {
 		var array = [], names = [];
 		var name = req.body.arg1;
 		var type = req.body.arg2;
+		var id = req.body.arg3;
 		var userid = req.session.userid;
 		var assessment = req.session.currentAssessment;
 		switch(type) {
 			case "organization":
 				nameColumn = 'Name';
-				field = 'Name, Email, PhoneNumber, WebsiteUrl';
-				array = ["Name", "Email", "PhoneNumber", "WebsiteUrl"];
-				names = ["Name", "Email", "Phone Number", "Website Url"];
+				field = 'IdAsset, Name, Email, PhoneNumber, WebsiteUrl';
+				array = ["IdAsset", "Name", "Email", "PhoneNumber", "WebsiteUrl"];
+				names = ["Id", "Name", "Email", "Phone Number", "Website Url"];
 				break;
 			case "network":
 				nameColumn = 'NetworkName';
-				field = 'NetworkName, IpNetStart, IpNetEnd, Cidr';
-				array = ["NetworkName", "IpNetStart", "IpNetEnd", "Cidr"];
-				names = ["Network Name", "Ip Net Start", "Ip Net End", "Cidr"];
+				field = 'IdAsset, NetworkName, IpNetStart, IpNetEnd, Cidr';
+				array = ["IdAsset", "NetworkName", "IpNetStart", "IpNetEnd", "Cidr"];
+				names = ["Id", "Network Name", "Ip Net Start", "Ip Net End", "Cidr"];
 				break;
 			case "person":
 				nameColumn = 'Name';
-				field = 'Name, Email, PhoneNumber, Birthdate';
-				array = ["Name", "Email", "PhoneNumber", "Birthdate"];
-				names = ["Name", "Email", "Phone Number", "Birthdate"];
+				field = 'IdAsset, Name, Email, PhoneNumber, Birthdate';
+				array = ["IdAsset", "Name", "Email", "PhoneNumber", "Birthdate"];
+				names = ["Id", "Name", "Email", "Phone Number", "Birthdate"];
 				break;
 			case "system":
 				nameColumn = 'SystemName';
-				field = 'SystemName, Version';
-				array = ["SystemName", "Version"];
-				names = ["System Name", "Version"];
+				field = 'IdAsset, SystemName, Version';
+				array = ["IdAsset", "SystemName", "Version"];
+				names = ["Id", "System Name", "Version"];
 				break;
 			case "computing-device":
 				nameColumn = 'Hostname';
-				field = 'DistinguishedName, Fdqn, Hostname, MotherboardGuid';
-				array = ["DistinguishedName", "Fdqn", "Hostname", "MotherboardGuid"];
-				names = ["Distinguished Name", "Fdqn", "Hostname", "Motherboard Guid"];
+				field = 'IdAsset, DistinguishedName, Fdqn, Hostname, MotherboardGuid';
+				array = ["IdAsset", "DistinguishedName", "Fdqn", "Hostname", "MotherboardGuid"];
+				names = ["Id", "Distinguished Name", "Fdqn", "Hostname", "Motherboard Guid"];
 				break;
 			case "circuit":
 				nameColumn = 'CircuitName';
-				field = 'CircuitName';
-				array =["CircuitName"];
-				names = ["Circuit Name"];
+				field = 'IdAsset, CircuitName';
+				array =["IdAsset", "CircuitName"];
+				names = ["Id", "Circuit Name"];
 				break;
 			case "software":
-				nameColumn = 'InstallationId';
-				field = 'InstallationId, Cpe, License';
-				array = ["InstallationId", "Cpe", "License"];
-				names = ["Installation Id", "Cpe", "License"];
+				nameColumn = 'Cpe';
+				field = 'IdAsset, InstallationId, Cpe, License';
+				array = ["IdAsset", "InstallationId", "Cpe", "License"];
+				names = ["Id", "Installation Id", "Cpe", "License"];
 				break;
 			case "service":
 				nameColumn = 'Fdqn';
-				field = 'Ip, Fdqn, Protocol';
-				array = ["Ip", "Fdqn", "Protocol"];
-				names = ["Ip", "Fdqn", "Protocol"];
+				field = 'IdAsset, Ip, Fdqn, Protocol';
+				array = ["IdAsset", "Ip", "Fdqn", "Protocol"];
+				names = ["Id", "Ip", "Fdqn", "Protocol"];
 				break;
 			case "database":
 				nameColumn = 'InstanceName';
-				field = 'InstanceName';
-				array = ["InstanceName"];
-				names = ["Instance Name"];
+				field = 'IdAsset, InstanceName';
+				array = ["IdAsset", "InstanceName"];
+				names = ["Id", "Instance Name"];
 				break;
 			case "website":
 				nameColumn = 'DocumentRoot';
-				field = 'DocumentRoot, Locale';
-				array = ["DocumentRoot", "Locale"];
-				names = ["DocumentRoot", "Locale"];
+				field = 'IdAsset, DocumentRoot, Locale';
+				array = ["IdAsset", "DocumentRoot", "Locale"];
+				names = ["Id", "DocumentRoot", "Locale"];
 				break;
 			default:
 		}
 		var sqlQuery = "SELECT " + field + " " +
 					   "FROM `" + type + "` " +
-					   "WHERE " + nameColumn + " = '" + name + "' " +
+					   "WHERE IdAsset = '" + id + "' " +
 					   "AND IdAsset IN (SELECT IdAsset " +
 					   				   "FROM asset " +
 					   				   "WHERE NomeAssessment = '" + assessment + "' " +
